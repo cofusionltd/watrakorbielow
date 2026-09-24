@@ -80,7 +80,7 @@ export const translations = {
       prox1: "100 m – Wyciągi orczykowe Cypisek & Andiamo (idealne dla dzieci i początkujących)",
       prox2: "800 m – Kompleks Narciarski Pilsko Jontek (koleje krzesełkowe i 20 km tras)",
       prox3: "2 km – Przejście graniczne ze Słowacją (Oravská Polhora / Tatralandia)",
-      prox4: "Tuż przy hotelu – Szlaki piesze i rowerowe na Halę Miziową i Rysiankę"
+      prox4: "Tuż przy ośrodku – Szlaki piesze i rowerowe na Halę Miziową i Rysiankę"
     },
     rooms: {
       tag: "Wygodny Sen w Beskidach",
@@ -313,7 +313,7 @@ export const translations = {
         "Guided ski-touring routes leading up to Mount Pilsko (1557 m)"
       ],
       summerTitle: "Hiking, cycling, and pure mountain air",
-      summerDesc: "In summer, enjoy refreshing mountain trails, birdsong, and outdoor relaxation right outside the hotel.",
+      summerDesc: "In summer, enjoy refreshing mountain trails, birdsong, and outdoor relaxation right outside the resort.",
       summerPoints: [
         "Direct trail access to Hala Miziowa, Mount Pilsko, and Rysianka",
         "Scenic downhill enduro trails and scenic gravel cycling paths",
@@ -455,7 +455,7 @@ export const translations = {
       spaTitle: "Jacuzzi & Sauna",
       spaDesc: "Vonkajšia vírivka pod hviezdami a fínska sauna",
       skiTitle: "100 m k vleku",
-      skiDesc: "Vleky Cypisek a Andiamo vedľa hotela, lyžiareň",
+      skiDesc: "Vleky Cypisek a Andiamo vedľa areálu, lyžiareň",
       grillTitle: "Grilovací altánok",
       grillDesc: "Zastrešené ohnisko pre večerné posedenia",
       rehabTitle: "Biliard & Stolný Tenis",
@@ -478,7 +478,7 @@ export const translations = {
       prox1: "100 m – Vleky Cypisek a Andiamo (ideálne pre rodiny a začiatočníkov)",
       prox2: "800 m – Lyžiarske stredisko Pilsko Jontek (sedačky a 20 km tratí)",
       prox3: "2 km – Hranica so Slovenskom (Oravská Polhora)",
-      prox4: "Pri hoteli – Turistické chodníky na Pilsko a Halu Miziowú"
+      prox4: "Pri areáli – Turistické chodníky na Pilsko a Halu Miziowú"
     },
     rooms: {
       tag: "Pohodlný spánok v horách",
@@ -512,7 +512,7 @@ export const translations = {
         "Skitouringové trasy na vrchol Pilska (1557 m n.m.)"
       ],
       summerTitle: "Horská turistika, cyklistika a pokoj",
-      summerDesc: "V lete si užijete ticho, vôňu ihličnatých lesov a množstvo trás začínajúcich priamo pri hoteli.",
+      summerDesc: "V lete si užijete ticho, vôňu ihličnatých lesov a množstvo trás začínajúcich priamo pri areáli.",
       summerPoints: [
         "Priamy vstup na turistické trasy na Pilsko a Halu Miziowú",
         "Cyklistické trasy a lesné zvážnice pre horské bicykle",
@@ -648,7 +648,7 @@ export const translations = {
       heading: "Unsere Ausstattung",
       subheading: "Alles für Ihren perfekten Bergurlaub",
       wifiTitle: "Schnelles WLAN",
-      wifiDesc: "Glasfaser-Internet im gesamten Hotel",
+      wifiDesc: "Glasfaser-Internet im gesamten Resort",
       restaurantTitle: "Restaurant & Bar",
       restaurantDesc: "Authentische regionale Beskidenküche",
       spaTitle: "Whirlpool & Sauna",
@@ -665,7 +665,7 @@ export const translations = {
     about: {
       tag: "Lernen Sie Watra Korbielów kennen",
       title: "Eine alpine Oase am Fuße des Pilsko (1557 m)",
-      description1: "Watra Korbielów ist ein familienfreundliches Berghotel im malerischen Tal von Korbielów, nahe der Grenze zur Slowakei.",
+      description1: "Watra Korbielów ist ein familienfreundliches Bergresort im malerischen Tal von Korbielów, nahe der Grenze zur Slowakei.",
       description2: "Nur 100 m von Skiliften und Wanderwegen entfernt, bieten wir den idealen Ausgangspunkt für Skifahren und Bergtouren.",
       stats: {
         capacity: "Bettenkapazität des Resorts",
@@ -702,7 +702,7 @@ export const translations = {
       winterTab: "Winter auf der Piste",
       summerTab: "Sommer & Wandern",
       winterTitle: "Paradies für Skifahrer & Snowboarder",
-      winterDesc: "Das Pilsko-Massiv bietet die schneereichste Saison der Region. Die Übungslifte liegen nur 100 m vom Hotel entfernt.",
+      winterDesc: "Das Pilsko-Massiv bietet die schneereichste Saison der Region. Die Übungslifte liegen nur 100 m vom Resort entfernt.",
       winterPoints: [
         "100 Meter zu den Übungsliften Cypisek & Andiamo mit Skischule",
         "Skigebiet Pilsko mit fast 20 km abwechslungsreichen Pisten",

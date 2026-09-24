@@ -1213,7 +1213,7 @@ export const AdminPage: React.FC = () => {
                   Wiedza Operacyjna Resortu Watra Korbielów
                 </h2>
                 <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
-                  Wgraj dokumenty z faktami o hotelu, stokach, menu karczmy, jacuzzi czy szlakach na Pilsko. Asystent natychmiast uczy się tych treści i wykorzystuje je, odpowiadając gościom w 4 językach (🇵🇱 Polski, 🇬🇧 English, 🇸🇰 Slovenčina, 🇩🇪 Deutsch).
+                  Wgraj dokumenty z faktami o ośrodku, stokach, menu karczmy, jacuzzi czy szlakach na Pilsko. Asystent natychmiast uczy się tych treści i wykorzystuje je, odpowiadając gościom w 4 językach (🇵🇱 Polski, 🇬🇧 English, 🇸🇰 Slovenčina, 🇩🇪 Deutsch).
                 </p>
               </div>
 
@@ -1325,7 +1325,7 @@ export const AdminPage: React.FC = () => {
                         onChange={(e: any) => setDocCategory(e.target.value)}
                         className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800 font-medium cursor-pointer"
                       >
-                        <option value="hotel">Pokoje & Regulamin Hotelu</option>
+                        <option value="hotel">Pokoje & Regulamin Ośrodka</option>
                         <option value="slopes">Stoki Narciarskie & Wyciągi</option>
                         <option value="restaurant">Restauracja & Karczma Watra</option>
                         <option value="spa">Wellness, Jacuzzi & Sauna</option>
@@ -1390,7 +1390,7 @@ export const AdminPage: React.FC = () => {
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { id: 'all', label: 'Wszystkie' },
-                    { id: 'hotel', label: 'Hotel & Pokoje' },
+                    { id: 'hotel', label: 'Ośrodek & Pokoje' },
                     { id: 'slopes', label: 'Stoki & Zima' },
                     { id: 'restaurant', label: 'Karczma & Menu' },
                     { id: 'spa', label: 'Wellness & SPA' },

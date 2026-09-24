@@ -439,7 +439,7 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       fromKrakowLabel: "Z Krakowa:",
       fromKrakowText: "Drogą DK52 przez Wadowice i Suchą Beskidzką lub trasą S7 do Lubnia i przez Rabkę i Zawoję.",
       fromSlovakiaLabel: "Ze Słowacji:",
-      fromSlovakiaText: "Przejście graniczne Oravská Polhora / Korbielów znajduje się zaledwie 3 km od naszego hotelu."
+      fromSlovakiaText: "Przejście graniczne Oravská Polhora / Korbielów znajduje się zaledwie 3 km od naszego ośrodka."
     },
     tripPlanner: {
       tag: "Google Maps • Precyzyjny Planer Dojazdu",
@@ -532,13 +532,13 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       storyP1: "Resort Watra położony jest w Korbielowie, w malowniczej dolinie rzeki Glinna, tuż u stóp Pilska (1557 m n.p.m.) – drugiego co do wysokości szczytu w Beskidzie Żywieckim. Od ponad 20 lat z pasją prowadzimy obiekt noclegowy, restaurację oraz strefę relaksu z całorocznym jacuzzi i sauną fińską.",
       storyP2: "Zimą nasi goście doceniają bezpośrednią bliskość wyciągów narciarskich – do wyciągu Cypisek i Andiamo dzieli nas zaledwie 100 metrów, co pozwala na bezpieczną naukę jazdy na nartach dla dzieci bez konieczności dojeżdżania samochodem. Latem Watra zamienia się w oazę spokoju, gdzie szum górskiego potoku i zapach świerkowego lasu tworzą wymarzone warunki do regeneracji.",
       experienceYears: "20+ lat",
-      experienceLabel: "doświadczenia w hotelarstwie",
+      experienceLabel: "doświadczenia w obsłudze ośrodka",
       elevationValue: "1557 m",
       elevationLabel: "wysokość szczytu Pilska nad nami",
       distancesTitle: "Położenie & Odległości od Kluczowych Miejsc",
       distancesSubtitle: "Dzięki dogodnej lokalizacji przy ul. Granicznej nasi goście mają błyskawiczny dostęp do infrastruktury narciarskiej, turystycznej i granicy ze Słowacją.",
       galleryTitle: "Galeria Obiektu & Okolicy",
-      gallerySubtitle: "Autentyczne fotografie naszego hotelu, restauracji i ogrodu",
+      gallerySubtitle: "Autentyczne fotografie naszego ośrodka, restauracji i ogrodu",
       bookStayBtn: "Rezerwuj Pobyt",
       distances: [
         { name: 'Wyciąg orczykowy "Cypisek" (dla początkujących i dzieci)', dist: '100 m' },
@@ -558,7 +558,7 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       winterTabBtn: "Zima w Watrze (Narty & Pilsko)",
       summerTabBtn: "Lato w Watrze (Szlaki & Rowery)",
       winterBadge: "100m do wyciągów • Cypisek & Andiamo",
-      winterHeading: "Narty Tuż za Progiem Hotelu",
+      winterHeading: "Narty Tuż za Progiem Ośrodka",
       winterLead: "Dla rodzin z dziećmi i osób stawiających pierwsze kroki na nartach lokalizacja Watry to prawdziwy skarb. Wyciąg orczykowy „Cypisek” (100 m) oraz talerzykowy „Andiamo” (120 m) ze sztucznym naśnieżaniem i oświetleniem pozwalają na naukę jazdy bez stania w korkach.",
       winterPoints: [
         "Ogrzewana przechowalnia sprzętu narciarskiego z suszarkami do butów",
@@ -582,7 +582,7 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       summerPoints: [
         "Trasy piesze: Pilsko (1557 m), Hala Rysianka, Hala Lipowska, Babia Góra",
         "Trasy rowerowe MTB i singletracki w Korbielowie i na Orawie",
-        "Duży zielony ogród hotelowy z leżakami, grillem i placem zabaw",
+        "Duży zielony ogród ośrodka z leżakami, grillem i placem zabaw",
         "Zewnętrzne jacuzzi w ogrodzie czynne również latem"
       ],
       bookSummerBtn: "Rezerwuj letni urlop (-10%)"
@@ -619,7 +619,7 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
     restaurantPage: {
       tag: "Restauracja • Karczma • Wiata Grillowa",
       title: "Autentyczne Smaki Beskidu Żywieckiego",
-      subtitle: "W naszej kuchni łączymy bogate tradycje góralskie z najwyższą jakością lokalnych produktów. Zapraszamy zarówno gości hotelowych, jak i turystów wędrujących ze szlaków Pilska.",
+      subtitle: "W naszej kuchni łączymy bogate tradycje góralskie z najwyższą jakością lokalnych produktów. Zapraszamy zarówno gości ośrodka, jak i turystów wędrujących ze szlaków Pilska.",
       storyHeading: "Tradycyjna Gościnność i Domowa Kuchnia",
       storyP1: "Wnętrze naszej restauracji urządzone jest w ciepłym, tradycyjnym stylu – regionalna gościnność i serdeczna atmosfera tworzą domowy klimat. Codziennie rano serwujemy obfity bufet śniadaniowy z regionalnymi wędlinami, świeżym pieczywem i gorącymi daniami.",
       storyP2: "Popołudniami i wieczorami zapraszamy na dania a la carte oraz regionalne napitki: beskidzkie nalewki ziołowe, grzane wino z korzeniami i lokalne piwa.",
@@ -1205,7 +1205,7 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       fromKrakowLabel: "Z Krakova:",
       fromKrakowText: "Po DK52 cez Wadowice a Suchú Beskidzku, alebo po S7 do Lubnia a cez Rabku a Zawoju.",
       fromSlovakiaLabel: "Zo Slovenska (Orava):",
-      fromSlovakiaText: "Hraničný priechod Oravská Polhora / Korbielów je vzdialený len 3 km od nášho hotela."
+      fromSlovakiaText: "Hraničný priechod Oravská Polhora / Korbielów je vzdialený len 3 km od nášho areálu."
     },
     tripPlanner: {
       tag: "Google Maps • Presný plánovač trasy",
@@ -1298,13 +1298,13 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       storyP1: "Stredisko Watra sa nachádza v obci Korbielów v malebnom údolí na úpätí vrchu Pilsko (1557 m n.m.) – druhého najvyššieho vrcholu v Żywieckych Beskydách. Už viac ako 20 rokov poskytujeme ubytovanie, reštauračné služby a relax vo vonkajšej vírivke a fínskej saune.",
       storyP2: "V zime hostia oceňujú bezprostrednú blízkosť vlekov Cypisek a Andiamo (iba 100 metrov), čo je ideálne pre bezpečné lyžovanie detí. V lete je Watra oázou pokoja s čistým vzduchom a vôňou lesa.",
       experienceYears: "20+ rokov",
-      experienceLabel: "skúseností v hotelierstve",
+      experienceLabel: "skúseností v obsluhe areálu",
       elevationValue: "1557 m",
       elevationLabel: "vrchol Pilska nad nami",
       distancesTitle: "Poloha & Vzdialenosti od kľúčových miest",
       distancesSubtitle: "Vďaka výhodnej polohe pri ul. Graniczna majú naši hostia rýchly prístup k zjazdovkám, chodníkom a slovenskej hranici.",
       galleryTitle: "Galéria strediska & okolia",
-      gallerySubtitle: "Skutočné fotografie nášho hotela, reštaurácie a záhrady",
+      gallerySubtitle: "Skutočné fotografie nášho areálu, reštaurácie a záhrady",
       bookStayBtn: "Rezervovať pobyt",
       distances: [
         { name: 'Vlek "Cypisek" (pre začiatočníkov a deti)', dist: '100 m' },
@@ -1588,7 +1588,7 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       fromKrakowLabel: "Aus Richtung Krakau:",
       fromKrakowText: "Über die DK52 via Wadowice und Sucha Beskidzka, oder S7 bis Lubień und via Rabka und Zawoja.",
       fromSlovakiaLabel: "Aus der Slowakei (Orava):",
-      fromSlovakiaText: "Der Grenzübergang Oravská Polhora / Korbielów liegt nur 3 km von unserem Hotel entfernt."
+      fromSlovakiaText: "Der Grenzübergang Oravská Polhora / Korbielów liegt nur 3 km von unserem Resort entfernt."
     },
     tripPlanner: {
       tag: "Google Maps • Exakter Routenplaner",
@@ -1687,7 +1687,7 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       distancesTitle: "Lage & Entfernungen zu wichtigen Punkten",
       distancesSubtitle: "Durch die verkehrsgünstige Lage an der ul. Graniczna erreichen Sie Skilifte, Wanderwege und die slowakische Grenze in wenigen Minuten.",
       galleryTitle: "Galerie des Resorts & der Region",
-      gallerySubtitle: "Authentische Aufnahmen unseres Hotels, Restaurants und Gartens",
+      gallerySubtitle: "Authentische Aufnahmen unseres Resorts, Restaurants und Gartens",
       bookStayBtn: "Aufenthalt buchen",
       distances: [
         { name: 'Schlepplift "Cypisek" (für Anfänger und Kinder)', dist: '100 m' },
@@ -1731,7 +1731,7 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       summerPoints: [
         "Wanderrouten: Pilsko (1557 m), Hala Rysianka, Hala Lipowska, Babia Góra",
         "MTB-Trails und Singletracks in Korbielów und auf der Orava",
-        "Großer Hotelgarten mit Sonnenliegen, Grillhütte und Spielplatz",
+        "Großer Resortgarten mit Sonnenliegen, Grillhütte und Spielplatz",
         "Beheizter Außen-Whirlpool im Garten auch im Sommer in Betrieb"
       ],
       bookSummerBtn: "Sommerurlaub buchen (-10%)"

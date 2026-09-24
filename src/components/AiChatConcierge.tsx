@@ -105,7 +105,7 @@ export const AiChatConcierge: React.FC<AiChatConciergeProps> = ({ currentLang = 
     { 
       langTag: '⛷️ Stok Pilsko',
       label: 'Wyciągi i 100 m do Cypiska', 
-      query: 'Jak blisko od hotelu Watra Korbielów znajdują się wyciągi narciarskie i stok Pilsko?' 
+      query: 'Jak blisko od ośrodka Watra Korbielów znajdują się wyciągi narciarskie i stok Pilsko?' 
     },
     { 
       langTag: '🛁 Wellness',
@@ -130,7 +130,7 @@ export const AiChatConcierge: React.FC<AiChatConciergeProps> = ({ currentLang = 
     { 
       langTag: '🇸🇰 SK',
       label: 'Vzdialenosť a vírivka', 
-      query: 'Ako ďaleko je hotel od slovenských hraníc a kedy funguje vonkajšia vírivka?' 
+      query: 'Ako ďaleko je ośrodek od slovenských hraníc a kedy funguje vonkajšia vírivka?' 
     },
     { 
       langTag: '🇩🇪 DE',

@@ -39,7 +39,7 @@ export const Footer: React.FC<FooterProps> = ({ lang, onNavigate, onOpenBooking 
                   Watra Korbielów
                 </span>
                 <span className="text-[11px] tracking-[0.2em] uppercase text-[#D4A373] font-semibold">
-                  Resort • Hotel • Restauracja
+                  Ośrodek • Restauracja
                 </span>
               </div>
             </div>

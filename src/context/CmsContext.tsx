@@ -6,7 +6,7 @@ import { adminFetch } from '../lib/adminApi';
 const initialCmsState: SiteCmsContent = {
   resort: {
     name: "Watra Korbielów",
-    tagline: "Resort • Hotel • Restauracja • SPA",
+    tagline: "Ośrodek • Restauracja • SPA",
     description: "Całoroczny resort górski w Beskidzie Żywieckim u stóp Pilska (1557 m n.p.m.). Położony zaledwie 100 m od wyciągów narciarskich Cypisek i Andiamo oraz 3 km od granicy ze Słowacją.",
     address: "ul. Graniczna 17",
     postalCity: "34-335 Korbielów",
@@ -39,7 +39,7 @@ const initialCmsState: SiteCmsContent = {
     title: "Górska Przystań u Stóp Pilska (1557 m n.p.m.)",
     lead: "Watra Korbielów to wyjątkowe miejsce łączące tradycyjną beskidzką gościnność ze współczesnym komfortem i pasją do gór.",
     storyParagraph1: "Nazwa 'Watra' pochodzi z tradycji pasterskiej i oznacza wieczne ognisko, które ogrzewało pasterzy i zbójników na halach Beskidu Żywieckiego. Od ponad 20 lat z sercem tworzymy przystań, w której każdy gość odnajduje spokój, regenerację i autentyczną góralską serdeczność.",
-    storyParagraph2: "Zimą jesteśmy wymarzonym punktem startowym dla narciarzy – łagodne stoki Cypisek i Andiamo znajdują się zaledwie 100 metrów od drzwi hotelu, a kolej linowa na Pilsko to kilkuminutowy spacer. Latem szlaki turystyczne na Halę Miziową i Rysiankę zaczynają się tuż za naszym płotem.",
+    storyParagraph2: "Zimą jesteśmy wymarzonym punktem startowym dla narciarzy – łagodne stoki Cypisek i Andiamo znajdują się zaledwie 100 metrów od drzwi ośrodka, a kolej linowa na Pilsko to kilkuminutowy spacer. Latem szlaki turystyczne na Halę Miziową i Rysiankę zaczynają się tuż za naszym płotem.",
     storyParagraph3: "W naszym ogrodzie czeka całoroczne jacuzzi z gorącą wodą 38°C pod rozgwieżdżonym niebem, sucha sauna fińska oraz zadaszona wiata grillowa z paleniskiem na regionalne biesiady.",
     distances: [
       { name: "Wyciąg orczykowy 'Cypisek' (dla dzieci i początkujących)", dist: "100 m" },
@@ -60,7 +60,7 @@ const initialCmsState: SiteCmsContent = {
       "/images/image-32.jpg"
     ],
     features: [
-      { title: "100 m od stoków", desc: "Wyciągi Cypisek i Andiamo tuż obok hotelu, ogrzewana narciarnia z suszarkami.", iconName: "Mountain" },
+      { title: "100 m od stoków", desc: "Wyciągi Cypisek i Andiamo tuż obok ośrodka, ogrzewana narciarnia z suszarkami.", iconName: "Mountain" },
       { title: "Gorące Jacuzzi 38°C", desc: "Zewnętrzna balia z hydromasażem pod gwiazdami czynna przez cały rok.", iconName: "Waves" },
       { title: "Karczma Regionalna", desc: "Kwaśnica na żeberku, placki po zbójnicku i świeży pstrąg potokowy.", iconName: "Flame" },
       { title: "Gwarancja Ceny -10%", desc: "Zawsze najniższa cena i darmowy parking przy rezerwacji bezpośredniej.", iconName: "Award" }
@@ -231,7 +231,7 @@ const initialCmsState: SiteCmsContent = {
   },
   footer: {
     aboutSnippet: "Watra Korbielów to całoroczny resort górski położony w Beskidzie Żywieckim u stóp Pilska (1557 m n.p.m.). Oferujemy 100 m do wyciągów narciarskich, gorące jacuzzi pod gwiazdami, tradycyjną karczmę beskidzką i komfortowe noclegi z 10% rabatem bezpośrednim.",
-    copyrightText: "© 2026 Watra Korbielów. Wszelkie prawa zastrzeżone. Hotel • Restauracja • SPA."
+    copyrightText: "© 2026 Watra Korbielów. Wszelkie prawa zastrzeżone. Ośrodek • Restauracja • SPA."
   }
 };
 
