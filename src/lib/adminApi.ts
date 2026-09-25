@@ -26,7 +26,7 @@ export function clearAdminToken(): void {
 export async function adminFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const token = getAdminToken();
   const headers = new Headers(init?.headers || {});
-  
+
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -36,10 +36,13 @@ export async function adminFetch(input: RequestInfo | URL, init?: RequestInit): 
     headers
   });
 
-  // If token expired or forbidden, notify or clear
   if (response.status === 401 || response.status === 403) {
-    if (window.location.hash.includes('admin')) {
-      console.warn('Admin session token rejected by server.');
+    clearAdminToken();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('watra-admin-session-expired'));
+      if (window.location.hash.includes('admin')) {
+        console.warn('Admin session token rejected by server.');
+      }
     }
   }
 

@@ -134,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
                 Watra
               </span>
               <span className="text-[9px] sm:text-[10px] tracking-[0.25em] uppercase text-[#D4A373] font-semibold mt-1">
-                Korbielów • Resort
+                Korbielów
               </span>
             </div>
           </button>

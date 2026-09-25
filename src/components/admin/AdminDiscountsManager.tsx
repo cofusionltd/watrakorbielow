@@ -67,6 +67,10 @@ export const AdminDiscountsManager: React.FC = () => {
     setErrorMsg(null);
     try {
       const res = await adminFetch('/api/admin/discounts');
+      if (res.status === 401 || res.status === 403) {
+        setErrorMsg('Sesja administratora wygasła. Zaloguj się ponownie.');
+        return;
+      }
       if (!res.ok) throw new Error('Błąd ładowania kodów rabatowych.');
       const data = await res.json();
       setDiscounts(data);

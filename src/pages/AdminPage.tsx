@@ -165,6 +165,20 @@ export const AdminPage: React.FC = () => {
   };
 
   useEffect(() => {
+    const handleAdminSessionExpired = () => {
+      clearAdminToken();
+      setIsAuthenticated(false);
+      setAuthError('Sesja administratora wygasła. Zaloguj się ponownie.');
+    };
+
+    window.addEventListener('watra-admin-session-expired', handleAdminSessionExpired);
+
+    return () => {
+      window.removeEventListener('watra-admin-session-expired', handleAdminSessionExpired);
+    };
+  }, []);
+
+  useEffect(() => {
     if (isAuthenticated) {
       fetchCampaigns();
       fetchReservations();

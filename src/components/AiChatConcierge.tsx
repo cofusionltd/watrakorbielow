@@ -71,26 +71,29 @@ export const AiChatConcierge: React.FC<AiChatConciergeProps> = ({ currentLang = 
     const pollSession = async () => {
       try {
         const res = await fetch(`/api/chat/session/${sessionId}`);
-        if (res.ok) {
-          const sessionData = await res.json();
-          if (sessionData) {
-            setIsAdminTakeover(!!sessionData.adminTakeover);
-            if (Array.isArray(sessionData.messages) && sessionData.messages.length > 0) {
-              // Map to ChatMessage format if new admin replies arrived
-              const mapped: ChatMessage[] = sessionData.messages.map((m: any) => ({
-                id: m.id,
-                sender: m.role === 'user' ? 'user' : 'assistant',
-                text: (m.role === 'admin' && m.translationGuest) ? m.translationGuest : m.content,
-                timestamp: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              }));
-              setMessages(prev => {
-                // If remote session has more messages, synchronize
-                if (mapped.length > prev.length) {
-                  return mapped;
-                }
-                return prev;
-              });
-            }
+        if (!res.ok) {
+          if (res.status === 404) return;
+          return;
+        }
+
+        const sessionData = await res.json();
+        if (sessionData) {
+          setIsAdminTakeover(!!sessionData.adminTakeover);
+          if (Array.isArray(sessionData.messages) && sessionData.messages.length > 0) {
+            // Map to ChatMessage format if new admin replies arrived
+            const mapped: ChatMessage[] = sessionData.messages.map((m: any) => ({
+              id: m.id,
+              sender: m.role === 'user' ? 'user' : 'assistant',
+              text: (m.role === 'admin' && m.translationGuest) ? m.translationGuest : m.content,
+              timestamp: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }));
+            setMessages(prev => {
+              // If remote session has more messages, synchronize
+              if (mapped.length > prev.length) {
+                return mapped;
+              }
+              return prev;
+            });
           }
         }
       } catch (_) {}
