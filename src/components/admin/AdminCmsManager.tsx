@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useCms } from '../../context/CmsContext';
 import { SiteCmsContent, MenuItem, DistanceItem, TreatmentItem } from '../../types';
 import { adminFetch } from '../../lib/adminApi';
+import { Language } from '../../types';
+import { adminText } from '../../adminTranslations';
 import { 
   Building2, 
   Sparkles, 
@@ -20,7 +22,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-export const AdminCmsManager: React.FC = () => {
+export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
   const { content, updateCmsContent, resetToDefaults } = useCms();
   const [activeTab, setActiveTab] = useState<'resort' | 'hero' | 'about' | 'restaurant' | 'wellness' | 'contact'>('resort');
   
@@ -54,7 +56,7 @@ export const AdminCmsManager: React.FC = () => {
   };
 
   const handleReset = async () => {
-    if (window.confirm('Czy na pewno chcesz przywrócić domyślne treści CMS? Twoje własne modyfikacje zostaną zastąpione.')) {
+    if (window.confirm(adminText(lang, 'Czy na pewno chcesz przywrócić domyślne treści CMS? Twoje własne modyfikacje zostaną zastąpione.'))) {
       setSaving(true);
       const ok = await resetToDefaults();
       setSaving(false);
@@ -85,10 +87,10 @@ export const AdminCmsManager: React.FC = () => {
         const json = await res.json();
         callback(json.url);
       } else {
-        alert('Błąd podczas przesyłania zdjęcia.');
+        alert(adminText(lang, 'Błąd podczas przesyłania zdjęcia.'));
       }
     } catch (err) {
-      alert('Błąd sieci podczas wgrywania pliku.');
+      alert(adminText(lang, 'Błąd sieci podczas wgrywania pliku.'));
     } finally {
       setUploadingImage(false);
     }
@@ -173,13 +175,13 @@ export const AdminCmsManager: React.FC = () => {
         <div>
           <div className="inline-flex items-center space-x-2 text-xs uppercase tracking-widest text-[#D4A373] font-bold bg-white/10 px-3 py-1 rounded-full mb-2">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Panel Zarządzania Treścią (CMS)</span>
+            <span>{adminText(lang, 'Panel Zarządzania Treścią (CMS)')}</span>
           </div>
           <h2 className="text-2xl font-serif font-bold text-white">
-            Edycja Treści Serwisu Watra Korbielów
+            {adminText(lang, 'Edycja Treści Serwisu Watra Korbielów')}
           </h2>
           <p className="text-sm text-neutral-300">
-            Zmieniaj teksty, dane kontaktowe, menu restauracji, godziny i opisy. Zmiany są od razu widoczne na stronie oraz w Concierge AI.
+            {adminText(lang, 'Zmieniaj teksty, dane kontaktowe, menu restauracji, godziny i opisy. Zmiany są od razu widoczne na stronie oraz w Concierge AI.')}
           </p>
         </div>
 
@@ -188,10 +190,10 @@ export const AdminCmsManager: React.FC = () => {
             onClick={handleReset}
             disabled={saving}
             className="flex items-center space-x-1.5 px-4 py-2.5 rounded-xl border border-white/20 hover:bg-white/10 text-neutral-200 text-xs font-semibold transition-colors cursor-pointer"
-            title="Przywróć domyślne treści"
+            title={adminText(lang, 'Przywróć domyślne treści')}
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset domyślne</span>
+            <span>{adminText(lang, 'Reset domyślne')}</span>
           </button>
 
           <button
@@ -200,11 +202,11 @@ export const AdminCmsManager: React.FC = () => {
             className="flex items-center space-x-2 bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg transition-colors cursor-pointer"
           >
             {saving ? (
-              <span>Zapisywanie...</span>
+              <span>{adminText(lang, 'Zapisywanie...')}</span>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                <span>Zapisz w CMS</span>
+                <span>{adminText(lang, 'Zapisz w CMS')}</span>
               </>
             )}
           </button>
@@ -230,12 +232,12 @@ export const AdminCmsManager: React.FC = () => {
       {/* Navigation Tabs */}
       <div className="flex overflow-x-auto gap-2 p-1.5 bg-white rounded-2xl border border-neutral-200 shadow-sm text-xs font-semibold">
         {[
-          { id: 'resort', label: 'Resort & Kontakt', icon: Building2 },
-          { id: 'hero', label: 'Baner Główny', icon: Sparkles },
-          { id: 'about', label: 'O Nas & Odległości', icon: Info },
-          { id: 'restaurant', label: 'Karczma & Menu', icon: UtensilsCrossed },
-          { id: 'wellness', label: 'Jacuzzi & Sauna', icon: Waves },
-          { id: 'contact', label: 'Dojazd & Stopka', icon: MapPin },
+          { id: 'resort', label: adminText(lang, 'Resort & Kontakt'), icon: Building2 },
+          { id: 'hero', label: adminText(lang, 'Baner Główny'), icon: Sparkles },
+          { id: 'about', label: adminText(lang, 'O Nas & Odległości'), icon: Info },
+          { id: 'restaurant', label: adminText(lang, 'Karczma & Menu'), icon: UtensilsCrossed },
+          { id: 'wellness', label: adminText(lang, 'Jacuzzi & Sauna'), icon: Waves },
+          { id: 'contact', label: adminText(lang, 'Dojazd & Stopka'), icon: MapPin },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -263,13 +265,13 @@ export const AdminCmsManager: React.FC = () => {
         {activeTab === 'resort' && (
           <div className="space-y-6">
             <div className="border-b border-neutral-100 pb-4">
-              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">Podstawowe Dane Ośrodka & Kontakt</h3>
-              <p className="text-xs text-neutral-500">Informacje teleadresowe, godziny recepcji, gwarancja rabatu bezpośredniego.</p>
+              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Podstawowe Dane Ośrodka & Kontakt')}</h3>
+              <p className="text-xs text-neutral-500">{adminText(lang, 'Informacje teleadresowe, godziny recepcji, gwarancja rabatu bezpośredniego.')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Nazwa Obiektu</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Nazwa Obiektu')}</label>
                 <input
                   type="text"
                   value={formData.resort.name}
@@ -279,7 +281,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Hasło Przewodnie (Tagline)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Hasło Przewodnie (Tagline)')}</label>
                 <input
                   type="text"
                   value={formData.resort.tagline}
@@ -289,7 +291,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Krótki Opis Ośrodka</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Krótki Opis Ośrodka')}</label>
                 <textarea
                   rows={2}
                   value={formData.resort.description}
@@ -299,7 +301,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Ulica i Numer</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Ulica i Numer')}</label>
                 <input
                   type="text"
                   value={formData.resort.address}
@@ -309,7 +311,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Kod Pocztowy i Miejscowość</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Kod Pocztowy i Miejscowość')}</label>
                 <input
                   type="text"
                   value={formData.resort.postalCity}
@@ -319,7 +321,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Telefon Główny</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Telefon Główny')}</label>
                 <input
                   type="text"
                   value={formData.resort.phone}
@@ -329,7 +331,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Adres E-mail Rezerwacji</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Adres E-mail Rezerwacji')}</label>
                 <input
                   type="email"
                   value={formData.resort.bookingEmail}
@@ -339,7 +341,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Godziny Pracy Recepcji</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Godziny Pracy Recepcji')}</label>
                 <input
                   type="text"
                   value={formData.resort.receptionHours}
@@ -350,7 +352,7 @@ export const AdminCmsManager: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Doba od (Check-in)</label>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Doba od (Check-in)')}</label>
                   <input
                     type="text"
                     value={formData.resort.checkInTime}
@@ -359,7 +361,7 @@ export const AdminCmsManager: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Doba do (Check-out)</label>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Doba do (Check-out)')}</label>
                   <input
                     type="text"
                     value={formData.resort.checkOutTime}
@@ -370,7 +372,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Numer Konta Bankowego</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Numer Konta Bankowego')}</label>
                 <input
                   type="text"
                   value={formData.resort.bankAccount}
@@ -380,7 +382,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Rabat Bezpośredni (%)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Rabat Bezpośredni (%)')}</label>
                 <input
                   type="number"
                   min={0}
@@ -393,7 +395,7 @@ export const AdminCmsManager: React.FC = () => {
 
               <div className="md:col-span-2 p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-amber-900 uppercase">Górna Belka Ogłoszeniowa (Nagłówek)</span>
+                  <span className="text-xs font-bold text-amber-900 uppercase">{adminText(lang, 'Górna Belka Ogłoszeniowa (Nagłówek)')}</span>
                   <label className="flex items-center space-x-2 text-xs font-semibold text-neutral-700 cursor-pointer">
                     <input
                       type="checkbox"
@@ -401,7 +403,7 @@ export const AdminCmsManager: React.FC = () => {
                       onChange={e => setFormData(prev => ({ ...prev, resort: { ...prev.resort, showAnnouncement: e.target.checked } }))}
                       className="rounded text-[#1E3A2B] focus:ring-[#1E3A2B]"
                     />
-                    <span>Wyświetlaj ogłoszenie na górze strony</span>
+                    <span>{adminText(lang, 'Wyświetlaj ogłoszenie na górze strony')}</span>
                   </label>
                 </div>
                 <input
@@ -409,7 +411,7 @@ export const AdminCmsManager: React.FC = () => {
                   value={formData.resort.announcementBanner}
                   onChange={e => setFormData(prev => ({ ...prev, resort: { ...prev.resort, announcementBanner: e.target.value } }))}
                   className="w-full px-3.5 py-2.5 rounded-lg border border-amber-300 bg-white text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                  placeholder="np. ❄️ 100 m do wyciągów Cypisek & Andiamo..."
+                  placeholder={adminText(lang, 'np. ❄️ 100 m do wyciągów Cypisek & Andiamo...')}
                 />
               </div>
             </div>
@@ -420,13 +422,13 @@ export const AdminCmsManager: React.FC = () => {
         {activeTab === 'hero' && (
           <div className="space-y-6">
             <div className="border-b border-neutral-100 pb-4">
-              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">Baner Główny (Hero)</h3>
-              <p className="text-xs text-neutral-500">Główny widok witryny, hasła promocyjne, odtwarzacz wideo i przyciski akcji.</p>
+              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Baner Główny (Hero)')}</h3>
+              <p className="text-xs text-neutral-500">{adminText(lang, 'Główny widok witryny, hasła promocyjne, odtwarzacz wideo i przyciski akcji.')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Nadtytuł (Eyebrow)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Nadtytuł (Eyebrow)')}</label>
                 <input
                   type="text"
                   value={formData.hero.eyebrow}
@@ -436,7 +438,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Plakietka Rabatowa</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Plakietka Rabatowa')}</label>
                 <input
                   type="text"
                   value={formData.hero.badgeText}
@@ -446,7 +448,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Początek Tytułu</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Początek Tytułu')}</label>
                 <input
                   type="text"
                   value={formData.hero.title}
@@ -456,7 +458,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Wyróżnione Słowo (Złote)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Wyróżnione Słowo (Złote)')}</label>
                 <input
                   type="text"
                   value={formData.hero.highlightWord}
@@ -466,7 +468,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Podtytuł Hero</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Podtytuł Hero')}</label>
                 <textarea
                   rows={2}
                   value={formData.hero.subtitle}
@@ -476,7 +478,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Napis na Przycisku Głównym (Rezerwuj)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Napis na Przycisku Głównym (Rezerwuj)')}</label>
                 <input
                   type="text"
                   value={formData.hero.ctaPrimaryText}
@@ -486,7 +488,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Napis na Przycisku Drugim (Stoki)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Napis na Przycisku Drugim (Stoki)')}</label>
                 <input
                   type="text"
                   value={formData.hero.ctaSecondaryText}
@@ -496,7 +498,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Zdjęcie w Tle (Poster)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Zdjęcie w Tle (Poster)')}</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -506,7 +508,7 @@ export const AdminCmsManager: React.FC = () => {
                   />
                   <label className="bg-neutral-100 hover:bg-neutral-200 px-3.5 py-2.5 rounded-xl flex items-center justify-center cursor-pointer text-xs font-semibold text-neutral-700 border border-neutral-300">
                     <Upload className="w-3.5 h-3.5 mr-1" />
-                    Wgraj
+                    {adminText(lang, 'Wgraj')}
                     <input
                       type="file"
                       accept="image/*"
@@ -518,7 +520,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Link Wideo YouTube (Prezentacja)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Link Wideo YouTube (Prezentacja)')}</label>
                 <input
                   type="text"
                   value={formData.hero.videoUrl}
@@ -534,14 +536,14 @@ export const AdminCmsManager: React.FC = () => {
         {activeTab === 'about' && (
           <div className="space-y-6">
             <div className="border-b border-neutral-100 pb-4">
-              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">Sekcja O Nas & Położenie</h3>
-              <p className="text-xs text-neutral-500">Historia Watry, walory lokalizacji oraz lista odległości do stoków i szlaków.</p>
+              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Sekcja O Nas & Położenie')}</h3>
+              <p className="text-xs text-neutral-500">{adminText(lang, 'Historia Watry, walory lokalizacji oraz lista odległości do stoków i szlaków.')}</p>
             </div>
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Tytuł Sekcji</label>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Tytuł Sekcji')}</label>
                   <input
                     type="text"
                     value={formData.about.title}
@@ -550,7 +552,7 @@ export const AdminCmsManager: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Plakietka</label>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Plakietka')}</label>
                   <input
                     type="text"
                     value={formData.about.badge}
@@ -561,7 +563,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Wstęp (Lead)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Wstęp (Lead)')}</label>
                 <textarea
                   rows={2}
                   value={formData.about.lead}
@@ -571,7 +573,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Akapit 1: Pochodzenie i Misja</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Akapit 1: Pochodzenie i Misja')}</label>
                 <textarea
                   rows={3}
                   value={formData.about.storyParagraph1}
@@ -581,7 +583,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Akapit 2: Zima i Lato u Stóp Pilska</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Akapit 2: Zima i Lato u Stóp Pilska')}</label>
                 <textarea
                   rows={3}
                   value={formData.about.storyParagraph2}
@@ -591,7 +593,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Akapit 3: Ogród, Jacuzzi i Biesiady</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Akapit 3: Ogród, Jacuzzi i Biesiady')}</label>
                 <textarea
                   rows={3}
                   value={formData.about.storyParagraph3}
@@ -604,15 +606,15 @@ export const AdminCmsManager: React.FC = () => {
               <div className="pt-4 border-t border-neutral-200">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h4 className="text-sm font-bold text-[#1E3A2B] uppercase tracking-wide">Odległości od Obiektu</h4>
-                    <p className="text-xs text-neutral-500">Wyświetlane na stronie O Nas oraz wykorzystywane przez Asystenta AI.</p>
+                    <h4 className="text-sm font-bold text-[#1E3A2B] uppercase tracking-wide">{adminText(lang, 'Odległości od Obiektu')}</h4>
+                    <p className="text-xs text-neutral-500">{adminText(lang, 'Wyświetlane na stronie O Nas oraz wykorzystywane przez Asystenta AI.')}</p>
                   </div>
                   <button
                     onClick={addDistance}
                     className="flex items-center space-x-1 bg-[#1E3A2B] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#2A4F3B]"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Dodaj Punkt</span>
+                    <span>{adminText(lang, 'Dodaj Punkt')}</span>
                   </button>
                 </div>
 
@@ -624,7 +626,7 @@ export const AdminCmsManager: React.FC = () => {
                         value={dist.name}
                         onChange={e => updateDistance(idx, { name: e.target.value })}
                         className="flex-grow px-3 py-1.5 rounded-lg border border-neutral-300 bg-white text-xs font-medium"
-                        placeholder="Nazwa miejsca..."
+                        placeholder={adminText(lang, 'Nazwa miejsca...')}
                       />
                       <input
                         type="text"
@@ -636,7 +638,7 @@ export const AdminCmsManager: React.FC = () => {
                       <button
                         onClick={() => removeDistance(idx)}
                         className="p-1.5 text-neutral-400 hover:text-red-600 rounded-lg hover:bg-red-50"
-                        title="Usuń"
+                        title={adminText(lang, 'Usuń')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -653,21 +655,21 @@ export const AdminCmsManager: React.FC = () => {
           <div className="space-y-6">
             <div className="border-b border-neutral-100 pb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">Karczma Regionalna & Karta Menu</h3>
-                <p className="text-xs text-neutral-500">Zarządzaj potrawami, cenami, godzinami posiłków i wiatą grillową.</p>
+                <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Karczma Regionalna & Karta Menu')}</h3>
+                <p className="text-xs text-neutral-500">{adminText(lang, 'Zarządzaj potrawami, cenami, godzinami posiłków i wiatą grillową.')}</p>
               </div>
               <button
                 onClick={addMenuItem}
                 className="flex items-center space-x-1.5 bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-4 py-2 rounded-xl text-xs font-bold uppercase shadow-sm"
               >
                 <Plus className="w-4 h-4" />
-                <span>Dodaj Potrawę</span>
+                <span>{adminText(lang, 'Dodaj Potrawę')}</span>
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Godziny Restauracji a la carte</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Godziny Restauracji a la carte')}</label>
                 <input
                   type="text"
                   value={formData.restaurant.openingHours}
@@ -676,7 +678,7 @@ export const AdminCmsManager: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Godziny Śniadań Bufetowych</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Godziny Śniadań Bufetowych')}</label>
                 <input
                   type="text"
                   value={formData.restaurant.breakfastHours}
@@ -685,7 +687,7 @@ export const AdminCmsManager: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Godziny Obiadokolacji</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Godziny Obiadokolacji')}</label>
                 <input
                   type="text"
                   value={formData.restaurant.dinnerHours}
@@ -696,7 +698,7 @@ export const AdminCmsManager: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Opis Wiaty Grillowej & Biesiad</label>
+              <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Opis Wiaty Grillowej & Biesiad')}</label>
               <textarea
                 rows={2}
                 value={formData.restaurant.fireplaceShelterInfo}
@@ -708,8 +710,8 @@ export const AdminCmsManager: React.FC = () => {
             {/* Menu Items List */}
             <div className="space-y-4 pt-2">
               <h4 className="text-sm font-bold text-[#1E3A2B] uppercase tracking-wider flex items-center justify-between">
-                <span>Pozycje Menu ({formData.restaurant.menuItems.length})</span>
-                <span className="text-xs text-neutral-400 font-normal">Wszystkie potrawy są automatycznie prezentowane w karcie dań i znane Concierge AI</span>
+                <span>{adminText(lang, 'Pozycje Menu')} ({formData.restaurant.menuItems.length})</span>
+                <span className="text-xs text-neutral-400 font-normal">{adminText(lang, 'Wszystkie potrawy są automatycznie prezentowane w karcie dań i znane Concierge AI')}</span>
               </h4>
 
               <div className="grid grid-cols-1 gap-3">
@@ -718,7 +720,7 @@ export const AdminCmsManager: React.FC = () => {
                     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                       <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-2 w-full">
                         <div className="sm:col-span-6">
-                          <label className="block text-[10px] font-bold text-neutral-500 uppercase">Nazwa Dania</label>
+                          <label className="block text-[10px] font-bold text-neutral-500 uppercase">{adminText(lang, 'Nazwa Dania')}</label>
                           <input
                             type="text"
                             value={item.name}
@@ -728,23 +730,23 @@ export const AdminCmsManager: React.FC = () => {
                         </div>
 
                         <div className="sm:col-span-3">
-                          <label className="block text-[10px] font-bold text-neutral-500 uppercase">Kategoria</label>
+                          <label className="block text-[10px] font-bold text-neutral-500 uppercase">{adminText(lang, 'Kategoria')}</label>
                           <select
                             value={item.category}
                             onChange={e => updateMenuItem(item.id, { category: e.target.value as any })}
                             className="w-full px-2.5 py-1.5 rounded-lg border border-neutral-300 bg-white text-xs font-semibold"
                           >
-                            <option value="zupy">Zupy</option>
-                            <option value="glowne">Dania Główne</option>
-                            <option value="przekaski">Przekąski</option>
-                            <option value="regionalne">Regionalne</option>
-                            <option value="desery">Desery</option>
-                            <option value="napoje">Napoje / Grzańce</option>
+                            <option value="zupy">{adminText(lang, 'Zupy')}</option>
+                            <option value="glowne">{adminText(lang, 'Dania Główne')}</option>
+                            <option value="przekaski">{adminText(lang, 'Przekąski')}</option>
+                            <option value="regionalne">{adminText(lang, 'Regionalne')}</option>
+                            <option value="desery">{adminText(lang, 'Desery')}</option>
+                            <option value="napoje">{adminText(lang, 'Napoje / Grzańce')}</option>
                           </select>
                         </div>
 
                         <div className="sm:col-span-3">
-                          <label className="block text-[10px] font-bold text-neutral-500 uppercase">Cena (zł)</label>
+                          <label className="block text-[10px] font-bold text-neutral-500 uppercase">{adminText(lang, 'Cena (zł)')}</label>
                           <input
                             type="number"
                             value={item.price}
@@ -757,7 +759,7 @@ export const AdminCmsManager: React.FC = () => {
                       <button
                         onClick={() => removeMenuItem(item.id)}
                         className="p-1.5 text-neutral-400 hover:text-red-600 rounded-lg hover:bg-red-50 shrink-0"
-                        title="Usuń danie z menu"
+                        title={adminText(lang, 'Usuń danie z menu')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -765,7 +767,7 @@ export const AdminCmsManager: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                       <div className="sm:col-span-8">
-                        <label className="block text-[10px] font-bold text-neutral-500 uppercase">Opis / Składniki</label>
+                        <label className="block text-[10px] font-bold text-neutral-500 uppercase">{adminText(lang, 'Opis / Składniki')}</label>
                         <input
                           type="text"
                           value={item.description}
@@ -774,12 +776,12 @@ export const AdminCmsManager: React.FC = () => {
                         />
                       </div>
                       <div className="sm:col-span-4">
-                        <label className="block text-[10px] font-bold text-neutral-500 uppercase">Plakietka (opcjonalna)</label>
+                          <label className="block text-[10px] font-bold text-neutral-500 uppercase">{adminText(lang, 'Plakietka (opcjonalna)')}</label>
                         <input
                           type="text"
                           value={item.badge || ''}
                           onChange={e => updateMenuItem(item.id, { badge: e.target.value })}
-                          placeholder="np. Bestseller, Specjalność"
+                          placeholder={adminText(lang, 'np. Bestseller, Specjalność')}
                           className="w-full px-2.5 py-1.5 rounded-lg border border-neutral-300 bg-white text-xs"
                         />
                       </div>
@@ -795,13 +797,13 @@ export const AdminCmsManager: React.FC = () => {
         {activeTab === 'wellness' && (
           <div className="space-y-6">
             <div className="border-b border-neutral-100 pb-4">
-              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">Strefa Relaksu & Jacuzzi</h3>
-              <p className="text-xs text-neutral-500">Zarządzaj informacjami o zewnętrznym jacuzzi, saunie fińskiej i seansach na wyłączność.</p>
+              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Strefa Relaksu & Jacuzzi')}</h3>
+              <p className="text-xs text-neutral-500">{adminText(lang, 'Zarządzaj informacjami o zewnętrznym jacuzzi, saunie fińskiej i seansach na wyłączność.')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Tytuł Jacuzzi</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Tytuł Jacuzzi')}</label>
                 <input
                   type="text"
                   value={formData.wellness.jacuzziTitle}
@@ -812,7 +814,7 @@ export const AdminCmsManager: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Temperatura Wody</label>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Temperatura Wody')}</label>
                   <input
                     type="text"
                     value={formData.wellness.jacuzziTemp}
@@ -821,7 +823,7 @@ export const AdminCmsManager: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Godziny Otwarcia</label>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Godziny Otwarcia')}</label>
                   <input
                     type="text"
                     value={formData.wellness.jacuzziHours}
@@ -832,7 +834,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Opis Kąpieli w Jacuzzi</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Opis Kąpieli w Jacuzzi')}</label>
                 <textarea
                   rows={3}
                   value={formData.wellness.jacuzziDescription}
@@ -842,7 +844,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Tytuł Sauny</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Tytuł Sauny')}</label>
                 <input
                   type="text"
                   value={formData.wellness.saunaTitle}
@@ -852,7 +854,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Temperatura Sauny</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Temperatura Sauny')}</label>
                 <input
                   type="text"
                   value={formData.wellness.saunaTemp}
@@ -862,7 +864,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Opis Sauny Fińskiej</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Opis Sauny Fińskiej')}</label>
                 <textarea
                   rows={2}
                   value={formData.wellness.saunaDescription}
@@ -872,7 +874,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Pakiet VIP na Wyłączność (z Winem)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Pakiet VIP na Wyłączność (z Winem)')}</label>
                 <textarea
                   rows={2}
                   value={formData.wellness.vipReservationNote}
@@ -882,7 +884,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Informacja o Cenach / Wstępie</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Informacja o Cenach / Wstępie')}</label>
                 <textarea
                   rows={2}
                   value={formData.wellness.pricingNote}
@@ -898,13 +900,13 @@ export const AdminCmsManager: React.FC = () => {
         {activeTab === 'contact' && (
           <div className="space-y-6">
             <div className="border-b border-neutral-100 pb-4">
-              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">Wskazówki Dojazdu & Treść Stopki</h3>
-              <p className="text-xs text-neutral-500">Informacje o dojeździe, parkingu, GPS oraz treść notki informacyjnej w stopce serwisu.</p>
+              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Wskazówki Dojazdu & Treść Stopki')}</h3>
+              <p className="text-xs text-neutral-500">{adminText(lang, 'Informacje o dojeździe, parkingu, GPS oraz treść notki informacyjnej w stopce serwisu.')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Dojazd Samochodem</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Dojazd Samochodem')}</label>
                 <textarea
                   rows={2}
                   value={formData.contact.directionsInfo}
@@ -914,7 +916,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Informacja o Parkingu</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Informacja o Parkingu')}</label>
                 <textarea
                   rows={2}
                   value={formData.contact.parkingInfo}
@@ -924,7 +926,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Współrzędne GPS</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Współrzędne GPS')}</label>
                 <input
                   type="text"
                   value={formData.contact.gpsCoordinates}
@@ -934,7 +936,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Komunikacja Publiczna (Autobus)</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Komunikacja Publiczna (Autobus)')}</label>
                 <input
                   type="text"
                   value={formData.contact.publicTransportInfo}
@@ -944,7 +946,7 @@ export const AdminCmsManager: React.FC = () => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">Krótki Tekst o Obiekcie w Stopce</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Krótki Tekst o Obiekcie w Stopce')}</label>
                 <textarea
                   rows={3}
                   value={formData.footer.aboutSnippet}

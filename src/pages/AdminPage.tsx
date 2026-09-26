@@ -44,8 +44,10 @@ import { AdminLiveChatManager } from '../components/admin/AdminLiveChatManager';
 import { AdminCmsManager } from '../components/admin/AdminCmsManager';
 import { AdminDiscountsManager } from '../components/admin/AdminDiscountsManager';
 import { adminFetch, getAdminToken, setAdminToken, clearAdminToken } from '../lib/adminApi';
+import { Language } from '../types';
+import { adminText } from '../adminTranslations';
 
-export const AdminPage: React.FC = () => {
+export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
   // Server-authenticated admin session check
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return !!getAdminToken();
@@ -523,14 +525,14 @@ export const AdminPage: React.FC = () => {
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#F9F8F6]">
-                  Panel Publikacji Promocji & Rezerwacji
+                  {adminText(lang, 'Panel Publikacji Promocji & Rezerwacji')}
                 </h1>
                 <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-400/30">
-                  Aktywny
+                  {adminText(lang, 'Aktywny')}
                 </span>
               </div>
               <p className="text-xs text-white/70 mt-1">
-                Publikuj nowe kampanie marketingowe, kody rabatowe i monitoruj bezpośrednie rezerwacje gości.
+                {adminText(lang, 'Publikuj nowe kampanie marketingowe, kody rabatowe i monitoruj bezpośrednie rezerwacje gości.')}
               </p>
             </div>
           </div>
@@ -544,22 +546,22 @@ export const AdminPage: React.FC = () => {
               className="bg-white/10 hover:bg-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Odśwież</span>
+              <span>{adminText(lang, 'Odśwież')}</span>
             </button>
             <button
               onClick={() => setIsCreating(!isCreating)}
               className="bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center space-x-1.5 shadow-md transition-colors cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>{isCreating ? 'Anuluj' : 'Nowa Kampania'}</span>
+              <span>{adminText(lang, isCreating ? 'Anuluj' : 'Nowa Kampania')}</span>
             </button>
             <button
               onClick={handleLogout}
               className="bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-400/30 px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
-              title="Wyloguj z panelu"
+              title={adminText(lang, 'Wyloguj')}
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Wyloguj</span>
+              <span className="hidden sm:inline">{adminText(lang, 'Wyloguj')}</span>
             </button>
           </div>
         </div>
@@ -583,7 +585,7 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <Sparkles className="w-4 h-4 text-[#D4A373]" />
-            <span>Zarządzanie Treścią (CMS)</span>
+            <span>{adminText(lang, 'Zarządzanie Treścią (CMS)')}</span>
           </button>
           <button
             onClick={() => setActiveTab('discounts')}
@@ -594,7 +596,7 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <Percent className="w-4 h-4 text-emerald-600" />
-            <span>Kody Rabatowe</span>
+            <span>{adminText(lang, 'Kody Rabatowe')}</span>
           </button>
           <button
             onClick={() => setActiveTab('rooms')}
@@ -605,7 +607,7 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <Bed className="w-4 h-4 text-amber-800" />
-            <span>Pokoje i Ceny (Baza Centralna)</span>
+            <span>{adminText(lang, 'Pokoje i Ceny (Baza Centralna)')}</span>
           </button>
           <button
             onClick={() => setActiveTab('live-chat')}
@@ -616,7 +618,7 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <Bot className="w-4 h-4 text-emerald-600" />
-            <span>AI Concierge & Czat na Żywo</span>
+            <span>{adminText(lang, 'AI Concierge & Czat na Żywo')}</span>
           </button>
           <button
             onClick={() => setActiveTab('guests')}
@@ -627,7 +629,7 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <Tag className="w-4 h-4 text-purple-600" />
-            <span>Stali Goście & Odznaki</span>
+            <span>{adminText(lang, 'Stali Goście & Odznaki')}</span>
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
@@ -638,7 +640,7 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <Activity className="w-4 h-4 text-emerald-600 animate-pulse" />
-            <span>Analityka Na Żywo</span>
+            <span>{adminText(lang, 'Analityka Na Żywo')}</span>
           </button>
           <button
             onClick={() => setActiveTab('reservations')}
@@ -649,7 +651,7 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Rezerwacje ({reservations.length})</span>
+            <span>{adminText(lang, 'Rezerwacje')} ({reservations.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('campaigns')}
@@ -660,7 +662,7 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <Megaphone className="w-4 h-4" />
-            <span>Promocje ({campaigns.length})</span>
+            <span>{adminText(lang, 'Promocje')} ({campaigns.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('knowledge')}
@@ -671,7 +673,7 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <BookOpen className="w-4 h-4 text-[#D4A373]" />
-            <span>Baza Wiedzy AI ({knowledgeDocs.length})</span>
+            <span>{adminText(lang, 'Baza Wiedzy AI')} ({knowledgeDocs.length})</span>
           </button>
         </div>
 
@@ -950,7 +952,7 @@ export const AdminPage: React.FC = () => {
 
         {/* TAB: CMS SITE CONTENT MANAGEMENT */}
         {activeTab === 'cms' && (
-          <AdminCmsManager />
+          <AdminCmsManager lang={lang} />
         )}
 
         {/* TAB: DISCOUNT CODES & PROMOTIONS MANAGEMENT */}
@@ -960,12 +962,12 @@ export const AdminPage: React.FC = () => {
 
         {/* TAB: ROOMS & PRICES (CENTRAL DATABASE TABLE) */}
         {activeTab === 'rooms' && (
-          <AdminRoomsManager />
+          <AdminRoomsManager lang={lang} />
         )}
 
         {/* TAB: LIVE AI CONCIERGE & ADMIN TAKEOVER & TRANSLATION */}
         {activeTab === 'live-chat' && (
-          <AdminLiveChatManager />
+          <AdminLiveChatManager lang={lang} />
         )}
 
         {/* TAB: FREQUENT GUESTS, BADGES & COMMUNICATION */}
@@ -1098,20 +1100,20 @@ export const AdminPage: React.FC = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="font-serif text-xl font-bold text-[#1E3A2B]">
-                Rezerwacje Bezpośrednie z Witryny
+                {adminText(lang, 'Rezerwacje Bezpośrednie z Witryny')}
               </h2>
               <span className="text-xs text-neutral-500">
-                Łącznie zgłoszeń: {reservations.length}
+                {adminText(lang, 'Łącznie zgłoszeń:')} {reservations.length}
               </span>
             </div>
 
             {isLoadingReservations ? (
               <div className="text-center py-12 text-sm text-neutral-500">
-                Ładowanie rezerwacji...
+                {adminText(lang, 'Ładowanie rezerwacji...')}
               </div>
             ) : reservations.length === 0 ? (
               <div className="bg-white rounded-2xl p-12 text-center text-neutral-500 text-sm border border-neutral-200">
-                Brak nowych zgłoszeń rezerwacji.
+                {adminText(lang, 'Brak nowych zgłoszeń rezerwacji.')}
               </div>
             ) : (
               <div className="bg-white rounded-2xl overflow-hidden border border-neutral-200 shadow-xs">
@@ -1119,13 +1121,13 @@ export const AdminPage: React.FC = () => {
                   <table className="w-full text-left text-xs">
                     <thead className="bg-[#F9F8F6] text-[#1E3A2B] font-bold border-b border-neutral-200 uppercase tracking-wider text-[10px]">
                       <tr>
-                        <th className="py-3 px-4">Numer / Data</th>
-                        <th className="py-3 px-4">Gość</th>
-                        <th className="py-3 px-4">Termin Pobytu</th>
-                        <th className="py-3 px-4">Pokój & Osoby</th>
-                        <th className="py-3 px-4">Kwota</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4 text-right">Akcje</th>
+                        <th className="py-3 px-4">{adminText(lang, 'Numer / Data')}</th>
+                        <th className="py-3 px-4">{adminText(lang, 'Gość')}</th>
+                        <th className="py-3 px-4">{adminText(lang, 'Termin Pobytu')}</th>
+                        <th className="py-3 px-4">{adminText(lang, 'Pokój & Osoby')}</th>
+                        <th className="py-3 px-4">{adminText(lang, 'Kwota')}</th>
+                        <th className="py-3 px-4">{adminText(lang, 'Status')}</th>
+                        <th className="py-3 px-4 text-right">{adminText(lang, 'Akcje')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
@@ -1134,7 +1136,7 @@ export const AdminPage: React.FC = () => {
                           <td className="py-3.5 px-4 font-mono font-bold text-[#1E3A2B]">
                             <div>{res.id}</div>
                             <div className="text-[10px] text-neutral-600 font-normal">
-                              {new Date(res.createdAt).toLocaleDateString('pl-PL')}
+                              {new Date(res.createdAt).toLocaleDateString(({ pl: 'pl-PL', en: 'en-GB', sk: 'sk-SK', de: 'de-DE' })[lang])}
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
@@ -1153,13 +1155,13 @@ export const AdminPage: React.FC = () => {
                               {res.checkIn} → {res.checkOut}
                             </div>
                             <div className="text-[10px] text-neutral-600">
-                              Płatność: {res.paymentMethod === 'transfer' ? 'Przelew bankowy' : 'Na miejscu'}
+                              {adminText(lang, 'Płatność:')} {adminText(lang, res.paymentMethod === 'transfer' ? 'Przelew bankowy' : 'Na miejscu')}
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
                             <div className="font-medium text-neutral-800">{res.roomId}</div>
                             <div className="text-[11px] text-neutral-600">
-                              {res.adults} dorosłych, {res.children} dzieci
+                              {res.adults} {adminText(lang, 'dorosłych,')} {res.children} {adminText(lang, 'dzieci')}
                             </div>
                             {res.specialRequests && (
                               <div className="text-[10px] text-amber-800 italic truncate max-w-xs mt-0.5">
@@ -1180,7 +1182,7 @@ export const AdminPage: React.FC = () => {
                                   : 'bg-amber-100 text-amber-800 border border-amber-300'
                               }`}
                             >
-                              {res.status}
+                              {adminText(lang, res.status)}
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-right">
@@ -1190,7 +1192,7 @@ export const AdminPage: React.FC = () => {
                                   onClick={() => handleUpdateReservationStatus(res.id, 'Potwierdzona')}
                                   className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700"
                                 >
-                                  Zatwierdź
+                                  {adminText(lang, 'Zatwierdź')}
                                 </button>
                               )}
                               {res.status !== 'Anulowana' && (
@@ -1198,7 +1200,7 @@ export const AdminPage: React.FC = () => {
                                   onClick={() => handleUpdateReservationStatus(res.id, 'Anulowana')}
                                   className="text-[10px] font-bold bg-neutral-200 text-neutral-700 px-2 py-1 rounded hover:bg-red-600 hover:text-white"
                                 >
-                                  Anuluj
+                                  {adminText(lang, 'Anuluj')}
                                 </button>
                               )}
                             </div>

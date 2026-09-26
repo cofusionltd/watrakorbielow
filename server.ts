@@ -345,9 +345,8 @@ Specjalności szefa kuchni:
 ];
 
 async function startServer() {
-  validateEnvironment();
+  const { PORT } = validateEnvironment();
   const app = express();
-  const PORT = 3000;
 
   // Trust first proxy hop (e.g. Cloud Run, reverse proxy)
   app.set("trust proxy", 1);
@@ -1717,6 +1716,26 @@ async function startServer() {
       return res.status(400).json({ error: "Wiadomość jest wymagana." });
     }
 
+    const lower = message.toLocaleLowerCase();
+    const isSlovak = /[ďťňľô]/i.test(lower) || /\b(ahoj|dobrý|deň|prosím|koľko|cenník|izba|izby|lyžovanie|chcem|kde|kedy|sú|ako|slovensky|slovensko|vírivka|raňajky)\b/i.test(lower);
+    const isGerman = /[äöüß]/i.test(lower) || /\b(hallo|guten|tag|morgen|abend|bitte|danke|wieviel|wie|viel|welch\w*|und|ich|bei|einer|direktbuchung|rabatt|vorteil\w*|erhalte|website|zimmer|skifahren|preise|preis|deutsch|deutschland|österreich|ist|sind|frühstück|whirlpool)\b/i.test(lower);
+    const isPolish = /[ąćęłńóśźż]/i.test(lower) || /\b(czy|jak|jest|są|gdzie|kiedy|zimą|zima|lato|latem|pokój|pokoje|cena|ceny|dzień|dobry|cześć|proszę|dziękuję|ile|narty|jedzenie|stok|rezerwacja|korbielów|balia|śniadanie)\b/i.test(lower);
+    const isEnglish = /\b(what|where|when|how|why|which|who|is|are|do|does|can|could|would|should|the|and|with|for|from|booking|discount|price|room|rooms|ski|slopes|available|open|breakfast|sauna|wellness|hello|please|thank|you|your|our|stay|reservation|direct)\b/i.test(lower);
+    const supportedLanguages = ["pl", "en", "de", "sk"] as const;
+    type ChatLanguage = (typeof supportedLanguages)[number];
+    let detectedLang: ChatLanguage = "en";
+    if (isSlovak) detectedLang = "sk";
+    else if (isGerman) detectedLang = "de";
+    else if (isPolish) detectedLang = "pl";
+    else if (isEnglish) detectedLang = "en";
+    else if (supportedLanguages.includes(preferredLang)) detectedLang = preferredLang;
+    const responseLanguageName = ({
+      pl: "Polish",
+      en: "English",
+      de: "German",
+      sk: "Slovak"
+    } as Record<ChatLanguage, string>)[detectedLang];
+
     const sessionId = clientSessionId || "guest-session-live";
     let session = liveChatSessions.get(sessionId);
     if (!session) {
@@ -1808,7 +1827,8 @@ async function startServer() {
     const systemPrompt = `You are the Multilingual AI Alpine Concierge and Guest Assistant for 'Watra Korbielów' (a mountain resort, hotel & restaurant located at ul. Graniczna 17, 34-335 Korbielów, Beskid Żywiec, Southern Poland, near Mount Pilsko and the Slovak border).
 
 CRITICAL DIRECTIVES:
-1. AUTOMATIC LANGUAGE DETECTION: You MUST detect the language used by the guest (e.g. Polish, English, Slovak, German, etc.) and reply in the EXACT SAME LANGUAGE fluently and naturally.
+1. RESPONSE LANGUAGE: The latest guest message is in ${responseLanguageName}. Reply ONLY in ${responseLanguageName}, fluently and naturally. The message language takes precedence over the website's selected interface language (${preferredLang}). Never answer in English when the guest's message is in German.
+  Detect the language used by the guest (e.g. Polish, English, Slovak, German, etc.) and reply in the EXACT SAME LANGUAGE fluently and naturally.
    - If the guest writes in Polish, respond in Polish (Polski 🇵🇱).
    - If the guest writes in English, respond in English (English 🇬🇧).
    - If the guest writes in Slovak, respond in Slovak (Slovenčina 🇸🇰).
@@ -1920,29 +1940,21 @@ Style Guidelines:
           }
         });
 
-        const responseText = response.text || "Hello! How can I assist you with your stay at Watra Korbielów?";
-        return await recordAndSendAiReply(responseText, "gemini-3.8-flash", preferredLang !== "auto" ? preferredLang : "pl");
+        const fallbackReplies: Record<ChatLanguage, string> = {
+          pl: "Dzień dobry! W czym mogę pomóc podczas pobytu w Watra Korbielów?",
+          en: "Hello! How can I assist you with your stay at Watra Korbielów?",
+          de: "Guten Tag! Wie kann ich Ihnen bei Ihrem Aufenthalt in Watra Korbielów helfen?",
+          sk: "Dobrý deň! Ako vám môžem pomôcť počas pobytu vo Watra Korbielów?"
+        };
+        const responseText = response.text?.trim() || fallbackReplies[detectedLang];
+        return await recordAndSendAiReply(responseText, "gemini-3.8-flash", detectedLang);
       } catch (err: any) {
         console.warn("Gemini API call failed, falling back to local concierge engine:", err.message);
       }
     }
 
     // 2. Intelligent local fallback multilingual knowledge-engine
-    const lower = message.toLowerCase();
-    
-    // Detect Language in fallback
-    const isSlovak = /[ďťňľô]/i.test(lower) || /\b(ahoj|dobrý|deň|prosím|koľko|cenník|izba|izby|lyžovanie|chcem|kde|kedy|sú|ako|slovensky|slovensko|vírivka|raňajky)\b/i.test(lower);
-    const isGerman = /[äöüß]/i.test(lower) || /\b(hallo|guten|tag|morgen|abend|bitte|danke|wieviel|wie|viel|zimmer|skifahren|preise|preis|deutsch|deutschland|österreich|ist|sind|frühstück|whirlpool)\b/i.test(lower);
-    const isPolish = /[ąćęłńóśźż]/i.test(lower) || /\b(czy|jak|jest|są|gdzie|kiedy|zimą|zima|lato|latem|pokój|pokoje|cena|ceny|dzień|dobry|cześć|proszę|dziękuję|ile|narty|jedzenie|stok|rezerwacja|korbielów|balia|śniadanie)\b/i.test(lower);
     const isTranslateRequest = /\b(translate|tlumacz|tłumacz|preklad|übersetz|how do you say|wie sagt man|ako sa povie|jak powiedzieć)\b/i.test(lower);
-
-    let detectedLang = "en";
-    if (isSlovak) detectedLang = "sk";
-    else if (isGerman) detectedLang = "de";
-    else if (isPolish) detectedLang = "pl";
-    else if (preferredLang && preferredLang !== "auto" && preferredLang !== "en") {
-      detectedLang = preferredLang;
-    }
 
     let reply = "";
 

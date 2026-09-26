@@ -180,7 +180,7 @@ export default function App() {
         )}
 
         {currentPage === 'admin' && (
-          <AdminPage />
+          <AdminPage lang={lang} />
         )}
       </main>
 

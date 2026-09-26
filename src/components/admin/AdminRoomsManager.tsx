@@ -18,8 +18,10 @@ import {
 } from 'lucide-react';
 import { Room } from '../../types';
 import { adminFetch } from '../../lib/adminApi';
+import { Language } from '../../types';
+import { adminText } from '../../adminTranslations';
 
-export const AdminRoomsManager: React.FC = () => {
+export const AdminRoomsManager: React.FC<{ lang: Language }> = ({ lang }) => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,13 +188,13 @@ export const AdminRoomsManager: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl shadow-sm border border-stone-200">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-stone-900">Zarządzanie Pokojami i Cenami</h2>
+            <h2 className="text-xl font-bold text-stone-900">{adminText(lang, 'Zarządzanie Pokojami i Cenami')}</h2>
             <span className="px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-900 rounded-full">
-              Baza Centralna PostgreSQL
+              {adminText(lang, 'Baza Centralna PostgreSQL')}
             </span>
           </div>
           <p className="text-sm text-stone-600 mt-1">
-            Jedyna centralna tabela pokoi w aplikacji. Wszelkie zmiany cen i opisów są natychmiast widoczne dla gości w ofercie, kalendarzu i rezerwacjach.
+            {adminText(lang, 'Jedyna centralna tabela pokoi w aplikacji. Wszelkie zmiany cen i opisów są natychmiast widoczne dla gości w ofercie, kalendarzu i rezerwacjach.')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -200,7 +202,7 @@ export const AdminRoomsManager: React.FC = () => {
             onClick={fetchRooms}
             disabled={isLoading}
             className="p-2.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"
-            title="Odśwież listę pokoi"
+            title={adminText(lang, 'Odśwież listę pokoi')}
           >
             <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
@@ -209,7 +211,7 @@ export const AdminRoomsManager: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2.5 bg-amber-800 hover:bg-amber-900 text-white text-sm font-medium rounded-xl shadow-sm hover:shadow transition-all"
           >
             <PlusCircle className="w-4 h-4" />
-            Dodaj Nowy Pokój
+            {adminText(lang, 'Dodaj Nowy Pokój')}
           </button>
         </div>
       </div>
@@ -252,16 +254,16 @@ export const AdminRoomsManager: React.FC = () => {
                 />
                 <div className="absolute top-3 left-3 flex gap-2">
                   <span className="px-2.5 py-1 bg-stone-900/80 text-white text-xs font-semibold rounded-lg backdrop-blur-sm">
-                    {room.category === 'double' ? 'Pokój 2-osobowy' : room.category === 'family' ? 'Pokój Rodzinny' : 'Apartament Deluxe'}
+                    {adminText(lang, room.category === 'double' ? 'Pokój 2-osobowy' : room.category === 'family' ? 'Pokój Rodzinny' : 'Apartament Deluxe')}
                   </span>
                   {room.active === false && (
                     <span className="px-2.5 py-1 bg-rose-600 text-white text-xs font-bold rounded-lg shadow-sm">
-                      Ukryty
+                      {adminText(lang, 'Ukryty')}
                     </span>
                   )}
                 </div>
                 <div className="absolute top-3 right-3 px-3 py-1 bg-amber-800 text-white font-bold text-sm rounded-lg shadow">
-                  {room.basePrice} zł <span className="text-xs font-normal">/ noc</span>
+                  {room.basePrice} zł <span className="text-xs font-normal">{adminText(lang, '/ noc')}</span>
                 </div>
               </div>
 
@@ -274,7 +276,7 @@ export const AdminRoomsManager: React.FC = () => {
                 <div className="flex flex-wrap gap-4 text-xs text-stone-600">
                   <span className="flex items-center gap-1.5 font-medium">
                     <Users className="w-4 h-4 text-amber-800" />
-                    Do {room.capacity} osób
+                    {adminText(lang, 'Do')} {room.capacity} {adminText(lang, 'osób')}
                   </span>
                   <span className="flex items-center gap-1.5 font-medium">
                     <Maximize2 className="w-4 h-4 text-amber-800" />
@@ -300,7 +302,7 @@ export const AdminRoomsManager: React.FC = () => {
                   ))}
                   {room.tags.length > 4 && (
                     <span className="px-2 py-0.5 bg-amber-50 text-amber-900 text-xs rounded-md font-medium">
-                      +{room.tags.length - 4} więcej
+                      +{room.tags.length - 4} {adminText(lang, 'więcej')}
                     </span>
                   )}
                 </div>
@@ -310,7 +312,7 @@ export const AdminRoomsManager: React.FC = () => {
             {/* Bottom Actions and Quick Price Input */}
             <div className="p-4 bg-stone-50 border-t border-stone-200 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-stone-600">Szybka zmiana ceny:</label>
+                <label className="text-xs font-medium text-stone-600">{adminText(lang, 'Szybka zmiana ceny:')}</label>
                 <div className="relative w-24">
                   <input
                     type="number"
@@ -333,12 +335,12 @@ export const AdminRoomsManager: React.FC = () => {
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 rounded-lg shadow-2xs transition-colors"
                 >
                   <Edit className="w-3.5 h-3.5 text-stone-600" />
-                  Edytuj
+                  {adminText(lang, 'Edytuj')}
                 </button>
                 <button
                   onClick={() => handleDelete(room.id, room.name)}
                   className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition-colors"
-                  title="Usuń pokój"
+                  title={adminText(lang, 'Usuń pokój')}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -354,7 +356,7 @@ export const AdminRoomsManager: React.FC = () => {
           <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6">
             <div className="flex justify-between items-center pb-4 border-b border-stone-200">
               <h3 className="text-xl font-bold text-stone-900">
-                {isCreating ? 'Dodaj Nowy Pokój do Bazy' : `Edycja Pokoju: ${editingRoom?.name}`}
+                {isCreating ? adminText(lang, 'Dodaj Nowy Pokój do Bazy') : `${adminText(lang, 'Edycja Pokoju: ')}${editingRoom?.name}`}
               </h3>
               <button onClick={closeModal} className="text-stone-400 hover:text-stone-700 text-xl font-bold">
                 ✕
@@ -365,36 +367,36 @@ export const AdminRoomsManager: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Nazwa Pokoju / Apartamentu *
+                    {adminText(lang, 'Nazwa Pokoju / Apartamentu *')}
                   </label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="np. Pokój 2-osobowy Comfort z Balkonem"
+                    placeholder={adminText(lang, 'np. Pokój 2-osobowy Comfort z Balkonem')}
                     className="w-full px-3.5 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Kategoria
+                    {adminText(lang, 'Kategoria')}
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as any)}
                     className="w-full px-3.5 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700"
                   >
-                    <option value="double">Pokój 2-osobowy (Double)</option>
-                    <option value="family">Pokój Rodzinny / Studio</option>
-                    <option value="suite">Apartament Górski Deluxe</option>
+                    <option value="double">{adminText(lang, 'Pokój 2-osobowy (Double)')}</option>
+                    <option value="family">{adminText(lang, 'Pokój Rodzinny / Studio')}</option>
+                    <option value="suite">{adminText(lang, 'Apartament Górski Deluxe')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Cena Podstawowa (zł / doba) *
+                    {adminText(lang, 'Cena Podstawowa (zł / doba) *')}
                   </label>
                   <input
                     type="number"
@@ -408,7 +410,7 @@ export const AdminRoomsManager: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Maksymalna Liczba Osób
+                    {adminText(lang, 'Maksymalna Liczba Osób')}
                   </label>
                   <input
                     type="number"
@@ -422,7 +424,7 @@ export const AdminRoomsManager: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Metraż (Powierzchnia)
+                    {adminText(lang, 'Metraż (Powierzchnia)')}
                   </label>
                   <input
                     type="text"
@@ -435,20 +437,20 @@ export const AdminRoomsManager: React.FC = () => {
 
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Konfiguracja Łóżek
+                    {adminText(lang, 'Konfiguracja Łóżek')}
                   </label>
                   <input
                     type="text"
                     value={bedConfig}
                     onChange={(e) => setBedConfig(e.target.value)}
-                    placeholder="np. 1 łoże małżeńskie King-Size lub 2 łóżka pojedyncze"
+                    placeholder={adminText(lang, 'np. 1 łoże małżeńskie King-Size lub 2 łóżka pojedyncze')}
                     className="w-full px-3.5 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Zdjęcia (URL ścieżki, po jednym w każdej linii)
+                    {adminText(lang, 'Zdjęcia (URL ścieżki, po jednym w każdej linii)')}
                   </label>
                   <textarea
                     rows={3}
@@ -458,32 +460,32 @@ export const AdminRoomsManager: React.FC = () => {
                     className="w-full px-3.5 py-2 text-xs font-mono border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700"
                   />
                   <p className="text-[11px] text-stone-500 mt-1">
-                    Wskazówka: Używaj ścieżek z katalogu /images/ (np. /images/image-22.jpg, /images/image-23.jpg, /images/image-24.jpg, /images/image-25.jpg).
+                    {adminText(lang, 'Wskazówka: Używaj ścieżek z katalogu /images/ (np. /images/image-22.jpg, /images/image-23.jpg, /images/image-24.jpg, /images/image-25.jpg).')}
                   </p>
                 </div>
 
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Udogodnienia i Etykiety (oddzielone przecinkami)
+                    {adminText(lang, 'Udogodnienia i Etykiety (oddzielone przecinkami)')}
                   </label>
                   <input
                     type="text"
                     value={tagsText}
                     onChange={(e) => setTagsText(e.target.value)}
-                    placeholder="Śniadanie w cenie, Prywatna łazienka, TV LED, Balkon z widokiem, Wi-Fi"
+                    placeholder={adminText(lang, 'Śniadanie w cenie, Prywatna łazienka, TV LED, Balkon z widokiem, Wi-Fi')}
                     className="w-full px-3.5 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Opis Pokoju dla Gości
+                    {adminText(lang, 'Opis Pokoju dla Gości')}
                   </label>
                   <textarea
                     rows={3}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Opisz atmosferę, wykończenie w drewnie, widoki z okna i wyposażenie..."
+                    placeholder={adminText(lang, 'Opisz atmosferę, wykończenie w drewnie, widoki z okna i wyposażenie...')}
                     className="w-full px-3.5 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700"
                   />
                 </div>
@@ -496,7 +498,7 @@ export const AdminRoomsManager: React.FC = () => {
                       onChange={(e) => setActive(e.target.checked)}
                       className="w-4 h-4 text-amber-800 rounded focus:ring-amber-700"
                     />
-                    Pokój aktywny i dostępny do rezerwacji online
+                    {adminText(lang, 'Pokój aktywny i dostępny do rezerwacji online')}
                   </label>
                 </div>
               </div>
@@ -507,13 +509,13 @@ export const AdminRoomsManager: React.FC = () => {
                   onClick={closeModal}
                   className="px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-900"
                 >
-                  Anuluj
+                  {adminText(lang, 'Anuluj')}
                 </button>
                 <button
                   type="submit"
                   className="px-6 py-2.5 bg-amber-800 hover:bg-amber-900 text-white text-sm font-bold rounded-xl shadow transition-colors"
                 >
-                  {isCreating ? 'Zapisz Pokój w Bazie' : 'Zapisz Zmiany'}
+                  {adminText(lang, isCreating ? 'Zapisz Pokój w Bazie' : 'Zapisz Zmiany')}
                 </button>
               </div>
             </form>

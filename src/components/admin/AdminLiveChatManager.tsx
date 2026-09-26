@@ -17,8 +17,9 @@ import {
   ShieldCheck,
   MessageSquare
 } from 'lucide-react';
-import { LiveChatSession, ChatMessageItem } from '../../types';
+import { Language, LiveChatSession } from '../../types';
 import { adminFetch } from '../../lib/adminApi';
+import { adminText } from '../../adminTranslations';
 
 const QUICK_PHRASES = [
   'Dzień dobry! W czym możemy Państwu dzisiaj pomóc?',
@@ -28,7 +29,7 @@ const QUICK_PHRASES = [
   'Wyciągi Cypisek i Andiamo znajdują się zaledwie 100m od wejścia do resortu.'
 ];
 
-export const AdminLiveChatManager: React.FC = () => {
+export const AdminLiveChatManager: React.FC<{ lang: Language }> = ({ lang }) => {
   const [sessions, setSessions] = useState<LiveChatSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +38,8 @@ export const AdminLiveChatManager: React.FC = () => {
   const [autoTranslate, setAutoTranslate] = useState(true);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
 
   const fetchSessions = async (silently = false) => {
     if (!silently) setIsLoading(true);
@@ -46,9 +48,11 @@ export const AdminLiveChatManager: React.FC = () => {
       if (res.ok) {
         const data: LiveChatSession[] = await res.json();
         setSessions(data);
-        if (!selectedSessionId && data.length > 0) {
-          setSelectedSessionId(data[0].sessionId);
-        }
+        setSelectedSessionId(currentId =>
+          currentId && data.some(session => session.sessionId === currentId)
+            ? currentId
+            : data[0]?.sessionId ?? null
+        );
       }
     } catch (err) {
       console.error('Failed to fetch chat sessions:', err);
@@ -69,8 +73,11 @@ export const AdminLiveChatManager: React.FC = () => {
   const selectedSession = sessions.find(s => s.sessionId === selectedSessionId) || null;
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [selectedSession?.messages]);
+    const messagesContainer = messagesContainerRef.current;
+    if (messagesContainer && shouldAutoScrollRef.current) {
+      messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
+    }
+  }, [selectedSessionId, selectedSession?.messages.length]);
 
   const handleToggleTakeover = async (session: LiveChatSession) => {
     const nextTakeover = !session.adminTakeover;
@@ -95,8 +102,8 @@ export const AdminLiveChatManager: React.FC = () => {
         );
         setActionNotice(
           nextTakeover
-            ? `🛑 AI zostało zatrzymane. Przejąłeś rozmowę z gościem "${session.guestName}"!`
-            : `▶️ AI Concierge wznowione dla gościa "${session.guestName}".`
+            ? adminText(lang, '🛑 AI zostało zatrzymane. Przejąłeś rozmowę z gościem "{guest}"!').replace('{guest}', session.guestName)
+            : adminText(lang, '▶️ AI Concierge wznowione dla gościa "{guest}".').replace('{guest}', session.guestName)
         );
       }
     } catch (err) {
@@ -140,8 +147,8 @@ export const AdminLiveChatManager: React.FC = () => {
         setAdminMessage('');
         setActionNotice(
           autoTranslate && selectedSession.language !== 'pl'
-            ? `Wysłano odpowiedź przetłumaczoną na język (${selectedSession.language.toUpperCase()})!`
-            : `Wysłano wiadomość z recepcji!`
+            ? adminText(lang, 'Wysłano odpowiedź przetłumaczoną na język ({language})!').replace('({language})', `(${selectedSession.language.toUpperCase()})`)
+            : adminText(lang, 'Wysłano wiadomość z recepcji!')
         );
       }
     } catch (err) {
@@ -159,6 +166,7 @@ export const AdminLiveChatManager: React.FC = () => {
       default: return { flag: '🇵🇱', name: 'Polski' };
     }
   };
+  const locale = { pl: 'pl-PL', en: 'en-GB', sk: 'sk-SK', de: 'de-DE' }[lang];
 
   return (
     <div className="space-y-6">
@@ -166,14 +174,14 @@ export const AdminLiveChatManager: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl shadow-sm border border-stone-200">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-bold text-stone-900">Rozmowy na Żywo & AI Concierge</h2>
+            <h2 className="text-xl font-bold text-stone-900">{adminText(lang, 'Rozmowy na Żywo & AI Concierge')}</h2>
             <span className="flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-900 rounded-full">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Synchronizacja na Żywo
+              {adminText(lang, 'Synchronizacja na Żywo')}
             </span>
           </div>
           <p className="text-sm text-stone-600 mt-1">
-            Podglądaj na bieżąco rozmowy gości z AI Concierge. W dowolnym momencie możesz zatrzymać AI, przejąć rozmowę i pisać po polsku z automatycznym tłumaczeniem na język gościa.
+            {adminText(lang, 'Podglądaj na bieżąco rozmowy gości z AI Concierge. W dowolnym momencie możesz zatrzymać AI, przejąć rozmowę i pisać po polsku z automatycznym tłumaczeniem na język gościa.')}
           </p>
         </div>
         <button
@@ -181,7 +189,7 @@ export const AdminLiveChatManager: React.FC = () => {
           className="flex items-center gap-2 px-3 py-2 text-stone-700 bg-stone-100 hover:bg-stone-200 text-xs font-semibold rounded-xl transition-colors"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          Odśwież
+          {adminText(lang, 'Odśwież')}
         </button>
       </div>
 
@@ -201,19 +209,19 @@ export const AdminLiveChatManager: React.FC = () => {
         {/* Active sessions list */}
         <div className="lg:col-span-4 space-y-3">
           <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500 px-1">
-            Otwarte Rozmowy ({sessions.length})
+            {adminText(lang, 'Otwarte Rozmowy')} ({sessions.length})
           </h3>
 
           <div className="space-y-2.5 max-h-[680px] overflow-y-auto pr-1">
             {sessions.length === 0 ? (
               <div className="p-8 text-center text-stone-400 bg-white rounded-2xl border border-stone-200">
                 <Bot className="w-8 h-8 text-stone-300 mx-auto mb-2" />
-                <p className="text-xs">Brak aktywnych sesji czatu w tym momencie.</p>
+                <p className="text-xs">{adminText(lang, 'Brak aktywnych sesji czatu w tym momencie.')}</p>
               </div>
             ) : (
               sessions.map((s) => {
                 const isSelected = selectedSessionId === s.sessionId;
-                const lang = getLanguageDetails(s.language);
+                const guestLanguage = getLanguageDetails(s.language);
                 return (
                   <div
                     key={s.sessionId}
@@ -226,18 +234,18 @@ export const AdminLiveChatManager: React.FC = () => {
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-2">
-                        <span className="text-base" title={lang.name}>{lang.flag}</span>
+                        <span className="text-base" title={guestLanguage.name}>{guestLanguage.flag}</span>
                         <div>
                           <span className="font-bold text-stone-900 text-sm">{s.guestName}</span>
                           <span className="text-[11px] text-stone-500 block">
-                            {new Date(s.lastMessageAt).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(s.lastMessageAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                       </div>
 
                       {s.adminTakeover ? (
                         <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-200 text-amber-900 rounded-full">
-                          👤 Recepcja
+                          👤 {adminText(lang, 'Recepcja')}
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded-full flex items-center gap-1">
@@ -247,7 +255,7 @@ export const AdminLiveChatManager: React.FC = () => {
                     </div>
 
                     <p className="text-xs text-stone-600 line-clamp-2 mt-2 font-normal">
-                      {s.lastMessage || 'Brak wiadomości'}
+                      {s.lastMessage || adminText(lang, 'Brak wiadomości')}
                     </p>
                   </div>
                 );
@@ -274,7 +282,7 @@ export const AdminLiveChatManager: React.FC = () => {
                       </span>
                     </div>
                     <span className="text-xs text-stone-500">
-                      ID Sesji: <code className="font-mono text-[11px] bg-stone-200 px-1 rounded">{selectedSession.sessionId}</code>
+                      {adminText(lang, 'ID Sesji:')} <code className="font-mono text-[11px] bg-stone-200 px-1 rounded">{selectedSession.sessionId}</code>
                     </span>
                   </div>
                 </div>
@@ -292,12 +300,12 @@ export const AdminLiveChatManager: React.FC = () => {
                     {selectedSession.adminTakeover ? (
                       <>
                         <Play className="w-3.5 h-3.5" />
-                        Wznów AI Concierge
+                        {adminText(lang, 'Wznów AI Concierge')}
                       </>
                     ) : (
                       <>
                         <Square className="w-3.5 h-3.5 fill-white" />
-                        Zatrzymaj AI i Przejmij Rozmowę
+                        {adminText(lang, 'Zatrzymaj AI i Przejmij Rozmowę')}
                       </>
                     )}
                   </button>
@@ -305,7 +313,14 @@ export const AdminLiveChatManager: React.FC = () => {
               </div>
 
               {/* Message Stream */}
-              <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-stone-50/40">
+              <div
+                ref={messagesContainerRef}
+                onScroll={(event) => {
+                  const container = event.currentTarget;
+                  shouldAutoScrollRef.current = container.scrollHeight - container.scrollTop - container.clientHeight < 48;
+                }}
+                className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-stone-50/40"
+              >
                 {selectedSession.messages.map((msg, idx) => {
                   const isGuest = msg.role === 'user';
                   const isAdmin = msg.role === 'admin';
@@ -321,11 +336,11 @@ export const AdminLiveChatManager: React.FC = () => {
                           {isGuest
                             ? `👤 ${selectedSession.guestName}`
                             : isAdmin
-                            ? '👑 Recepcja (Ty)'
+                            ? adminText(lang, '👑 Recepcja (Ty)')
                             : '🤖 AI Alpine Concierge'}
                         </span>
                         <span className="text-[10px] text-stone-400">
-                          {new Date(msg.timestamp).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(msg.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
 
@@ -347,7 +362,7 @@ export const AdminLiveChatManager: React.FC = () => {
                             <Languages className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                             <div>
                               <span className="font-bold block text-[11px] uppercase tracking-wider text-amber-800">
-                                🇵🇱 Automatyczne Tłumaczenie dla Recepcji:
+                                {adminText(lang, '🇵🇱 Automatyczne Tłumaczenie dla Recepcji:')}
                               </span>
                               <span>{msg.translationPl}</span>
                             </div>
@@ -358,7 +373,7 @@ export const AdminLiveChatManager: React.FC = () => {
                         {isAdmin && msg.translationGuest && selectedSession.language !== 'pl' && (
                           <div className="mt-2.5 pt-2 border-t border-amber-700/50 text-xs text-amber-100 bg-amber-900/40 p-2 rounded-lg font-medium">
                             <span className="font-bold block text-[11px] uppercase tracking-wider text-amber-200">
-                              🌐 Wysłano do gościa w języku ({selectedSession.language.toUpperCase()}):
+                              {adminText(lang, '🌐 Wysłano do gościa w języku ({language}):').replace('({language})', `(${selectedSession.language.toUpperCase()})`)}
                             </span>
                             <span>{msg.translationGuest}</span>
                           </div>
@@ -367,19 +382,18 @@ export const AdminLiveChatManager: React.FC = () => {
                     </div>
                   );
                 })}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Quick response suggestions */}
               <div className="px-4 py-2 bg-stone-100/70 border-t border-stone-200 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap">
-                <span className="text-[11px] font-bold text-stone-500 shrink-0">Szybkie zwroty:</span>
+                <span className="text-[11px] font-bold text-stone-500 shrink-0">{adminText(lang, 'Szybkie zwroty:')}</span>
                 {QUICK_PHRASES.map((phrase, i) => (
                   <button
                     key={i}
                     onClick={() => setAdminMessage(phrase)}
                     className="px-2.5 py-1 text-xs bg-white text-stone-700 hover:bg-stone-50 border border-stone-300 rounded-lg shrink-0 transition-colors"
                   >
-                    {phrase.slice(0, 32)}...
+                    {adminText(lang, phrase).slice(0, 32)}...
                   </button>
                 ))}
               </div>
@@ -396,13 +410,13 @@ export const AdminLiveChatManager: React.FC = () => {
                     />
                     <Languages className="w-3.5 h-3.5 text-amber-800" />
                     <span>
-                      Tłumacz z polskiego na język gościa (
+                      {adminText(lang, 'Tłumacz z polskiego na język gościa (')}
                       <strong>{getLanguageDetails(selectedSession.language).name}</strong>)
                     </span>
                   </label>
 
                   <span className="text-[11px] text-stone-500">
-                    Piszesz jako: <strong>Recepcja Watra Korbielów</strong>
+                    {adminText(lang, 'Piszesz jako:')} <strong>Recepcja Watra Korbielów</strong>
                   </span>
                 </div>
 
@@ -419,8 +433,8 @@ export const AdminLiveChatManager: React.FC = () => {
                     }}
                     placeholder={
                       selectedSession.adminTakeover
-                        ? 'Napisz odpowiedź po polsku (AI nie odpowie, Ty prowadzisz rozmowę)...'
-                        : 'Napisz odpowiedź (wysłanie wiadomości automatycznie przejmie rozmowę z AI)...'
+                        ? adminText(lang, 'Napisz odpowiedź po polsku (AI nie odpowie, Ty prowadzisz rozmowę)...')
+                        : adminText(lang, 'Napisz odpowiedź (wysłanie wiadomości automatycznie przejmie rozmowę z AI)...')
                     }
                     className="flex-1 px-3.5 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700 resize-none"
                   />
@@ -430,14 +444,14 @@ export const AdminLiveChatManager: React.FC = () => {
                     className="px-5 bg-amber-800 hover:bg-amber-900 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow flex items-center justify-center gap-1.5 transition-all"
                   >
                     <Send className="w-4 h-4" />
-                    Wyślij
+                    {adminText(lang, 'Wyślij')}
                   </button>
                 </div>
               </form>
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-stone-200 p-16 text-center text-stone-400">
-              Wybierz sesję rozmowy z listy po lewej, aby zobaczyć wiadomości.
+              {adminText(lang, 'Wybierz sesję rozmowy z listy po lewej, aby zobaczyć wiadomości.')}
             </div>
           )}
         </div>
