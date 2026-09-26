@@ -9,7 +9,7 @@ const CMS_STORAGE_FILE = path.join(process.cwd(), 'server', 'cms_data.json');
 export const defaultCmsContent: SiteCmsContent = {
   resort: {
     name: "Watra Korbielów",
-    tagline: "Resort • Hotel • Restauracja • SPA",
+    tagline: "Ośrodek • Restauracja • SPA",
     description: "Całoroczny resort górski w Beskidzie Żywieckim u stóp Pilska (1557 m n.p.m.). Położony zaledwie 100 m od wyciągów narciarskich Cypisek i Andiamo oraz 3 km od granicy ze Słowacją.",
     address: "ul. Graniczna 17",
     postalCity: "34-335 Korbielów",
@@ -234,7 +234,7 @@ export const defaultCmsContent: SiteCmsContent = {
   },
   footer: {
     aboutSnippet: "Watra Korbielów to całoroczny resort górski położony w Beskidzie Żywieckim u stóp Pilska (1557 m n.p.m.). Oferujemy 100 m do wyciągów narciarskich, gorące jacuzzi pod gwiazdami, tradycyjną karczmę beskidzką i komfortowe noclegi z 10% rabatem bezpośrednim.",
-    copyrightText: "© 2026 Watra Korbielów. Wszelkie prawa zastrzeżone. Hotel • Restauracja • SPA."
+    copyrightText: "© 2026 Watra Korbielów. Wszelkie prawa zastrzeżone. Ośrodek • Restauracja • SPA."
   }
 };
 

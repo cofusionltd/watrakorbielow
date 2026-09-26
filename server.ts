@@ -380,7 +380,7 @@ async function startServer() {
     res.json({
       status: "ok",
       name: "Watra Korbielów API",
-      resort: "Watra Korbielów Hotel & Restauracja",
+      resort: "Watra Korbielów Ośrodek • Restauracja",
       location: "Korbielów, Beskid Żywiecki",
       databaseType: "postgresql",
       databaseConfigured: hasDatabaseConfig,
