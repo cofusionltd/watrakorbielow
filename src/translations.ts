@@ -32,6 +32,23 @@ export const translations = {
       winterMode: "Widok zimowy",
       summerMode: "Widok letni"
     },
+    homePage: {
+      aboutBadge: "Beskid Żywiecki • Korbielów",
+      aboutTitle: "Górska Przystań u Stóp Pilska (1557 m n.p.m.)",
+      aboutDescription: "Watra Korbielów to wyjątkowe miejsce łączące tradycyjną beskidzką gościnność ze współczesnym komfortem. Położeni zaledwie 100 m od stoków narciarskich Cypisek i Andiamo oraz bezpośrednio przy szlaku na Halę Miziową, stanowimy idealną bazę wypadową o każdej porze roku.",
+      aboutPrimaryCta: "Poznaj naszą historię",
+      aboutSecondaryCta: "Dojazd & Mapa",
+      roomsBadge: "Noclegi & Komfort",
+      roomsTitle: "Komfortowe Pokoje i Apartamenty",
+      roomsSecondaryCta: "Zobacz pełny cennik i pokoje",
+      roomsReserveCta: "Rezerwuj (-10%)",
+      wellnessBadge: "Strefa SPA & Relaksu",
+      wellnessTitle: "Całoroczne Jacuzzi Zewnętrzne & Sauna",
+      wellnessMore: "Więcej o strefie wellness",
+      restaurantBadge: "Beskidzka Kuchnia & Grill",
+      restaurantTitle: "Autentyczna Karczma & Wiata Biesiadna",
+      restaurantMore: "Zobacz menu i ofertę karczmy"
+    },
     bookingBar: {
       checkIn: "Przyjazd",
       checkOut: "Wyjazd",
@@ -230,6 +247,23 @@ export const translations = {
       mountainStatus: "Today's Mountain Conditions",
       winterMode: "Winter View",
       summerMode: "Summer View"
+    },
+    homePage: {
+      aboutBadge: "Beskid Mountains • Korbielów",
+      aboutTitle: "Mountain Haven at the Foot of Mount Pilsko (1557 m)",
+      aboutDescription: "Watra Korbielów brings together traditional Beskid hospitality and modern comfort. Just 100 m from the Cypisek and Andiamo ski slopes and directly by the trail to Hala Miziowa, it is the perfect base for every season.",
+      aboutPrimaryCta: "Learn Our Story",
+      aboutSecondaryCta: "Directions & Map",
+      roomsBadge: "Stays & Comfort",
+      roomsTitle: "Comfortable Rooms & Apartments",
+      roomsSecondaryCta: "View all rooms and pricing",
+      roomsReserveCta: "Book (-10%)",
+      wellnessBadge: "SPA & Relaxation Zone",
+      wellnessTitle: "Outdoor Jacuzzi & Sauna",
+      wellnessMore: "More about wellness",
+      restaurantBadge: "Beskid Cuisine & Grill",
+      restaurantTitle: "Traditional Tavern & Feast Pavilion",
+      restaurantMore: "View menu and restaurant offers"
     },
     bookingBar: {
       checkIn: "Check-in",
@@ -430,6 +464,23 @@ export const translations = {
       winterMode: "Zimný pohľad",
       summerMode: "Letný pohľad"
     },
+    homePage: {
+      aboutBadge: "Beskydy • Korbielów",
+      aboutTitle: "Horská oáza pokoja na úpätí vrchu Pilsko (1557 m n.m.)",
+      aboutDescription: "Watra Korbielów spája tradičnú beskydskú pohostinnosť s moderným komfortom. Len 100 m od lyžiarskych vlekov Cypisek a Andiamo a priamo pri turistickej trase na Halu Miziową je ideálnou základňou pre každý ročný čas.",
+      aboutPrimaryCta: "Poznať našu históriu",
+      aboutSecondaryCta: "Dojazd & mapa",
+      roomsBadge: "Ubytovanie & Komfort",
+      roomsTitle: "Komfortné izby a apartmány",
+      roomsSecondaryCta: "Pozrieť celý cenník a izby",
+      roomsReserveCta: "Rezervovať (-10%)",
+      wellnessBadge: "SPA & Relax zóna",
+      wellnessTitle: "Vonkajšie jacuzzi & sauna",
+      wellnessMore: "Viac o wellness",
+      restaurantBadge: "Beskydská kuchyňa & gril",
+      restaurantTitle: "Autentická krčma & biesiadný altánok",
+      restaurantMore: "Pozrieť menu a ponuku krčmy"
+    },
     bookingBar: {
       checkIn: "Príchod",
       checkOut: "Odchod",
@@ -628,6 +679,23 @@ export const translations = {
       mountainStatus: "Aktuelle Bergbedingungen",
       winterMode: "Winteransicht",
       summerMode: "Sommeransicht"
+    },
+    homePage: {
+      aboutBadge: "Beskiden • Korbielów",
+      aboutTitle: "Bergidylle am Fuße des Pilsko (1557 m)",
+      aboutDescription: "Watra Korbielów verbindet traditionelle beskidische Gastfreundschaft mit modernem Komfort. Nur 100 m von den Skiliften Cypisek und Andiamo entfernt und direkt am Wanderweg zur Hala Miziowa ist es die perfekte Basis für jede Jahreszeit.",
+      aboutPrimaryCta: "Unsere Geschichte entdecken",
+      aboutSecondaryCta: "Anfahrt & Karte",
+      roomsBadge: "Unterkünfte & Komfort",
+      roomsTitle: "Komfortable Zimmer & Apartments",
+      roomsSecondaryCta: "Alle Zimmer und Preise ansehen",
+      roomsReserveCta: "Buchen (-10%)",
+      wellnessBadge: "SPA & Entspannungszone",
+      wellnessTitle: "Außen-Whirlpool & Sauna",
+      wellnessMore: "Mehr zum Wellnessbereich",
+      restaurantBadge: "Beskidenküche & Grill",
+      restaurantTitle: "Traditionelle Waldhütte & Festpavillon",
+      restaurantMore: "Menü und Angebote ansehen"
     },
     bookingBar: {
       checkIn: "Anreise",

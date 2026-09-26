@@ -29,7 +29,7 @@ const initialCmsState: SiteCmsContent = {
     highlightWord: "Watra Korbielów",
     subtitle: "Prawdziwa beskidzka gościnność 100 m od stoków narciarskich, gorące jacuzzi pod gwiazdami, tradycyjna kuchnia i komfortowe pokoje z widokiem na góry.",
     badgeText: "-10% Taniej niż na portalach",
-    posterImage: "/images/image-13.jpg",
+    posterImage: "/images/banner-1.jpg",
     videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     ctaPrimaryText: "Rezerwuj Pobyt (-10%)",
     ctaSecondaryText: "Zobacz Stoki & Wyciągi",

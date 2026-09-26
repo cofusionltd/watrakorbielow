@@ -88,8 +88,8 @@ export const SeasonalToggle: React.FC<SeasonalToggleProps> = ({ lang }) => {
               <div className="space-y-4">
                 <div className="rounded-2xl overflow-hidden shadow-xl border-2 border-white/10 h-64">
                   <img
-                    src="/images/about.jpg"
-                    alt="Zimowe stoki Korbielów"
+                    src="/images/banner-1.jpg"
+                    alt="Panoramiczne widoki Korbielów"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   />
                 </div>

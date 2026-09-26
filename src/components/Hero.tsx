@@ -127,9 +127,8 @@ export const Hero: React.FC<HeroProps> = ({
       });
   }, []);
 
-  // Swapped images per user request: Winter gets about.jpg, Summer gets banner-1.jpg
   const heroImages = {
-    winter: "/images/about.jpg",
+    winter: "/images/banner-1.jpg",
     summer: "/images/banner-1.jpg",
   };
 
@@ -185,7 +184,7 @@ export const Hero: React.FC<HeroProps> = ({
                 onMouseLeave={handleMouseLeave}
                 onClick={() => setIsForecastOpen(prev => !prev)}
                 className="group flex items-center space-x-3 bg-[#14281E]/90 hover:bg-[#14281E] backdrop-blur-md border border-white/20 hover:border-[#D4A373]/60 px-4 py-2 rounded-full text-xs text-white shadow-lg cursor-pointer transition-all duration-200 select-none"
-                title="Najedź kursor lub kliknij, aby zobaczyć prognozę 7-dniową"
+                title={t.heroExtra?.forecastTitle ? `Najedź kursor lub kliknij, aby zobaczyć ${t.heroExtra.forecastTitle.toLowerCase()}` : 'Najedź kursor lub kliknij, aby zobaczyć prognozę 7-dniową'}
               >
                 <span className="flex items-center space-x-1.5 text-[#D4A373] font-semibold">
                   <Thermometer className="w-3.5 h-3.5 text-[#D4A373] animate-pulse" />

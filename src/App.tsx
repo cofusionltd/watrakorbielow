@@ -24,6 +24,7 @@ import { Language, BookingSearchQuery, PackageOffer, PageView } from './types';
 import { Phone, Calendar } from 'lucide-react';
 import { CmsProvider } from './context/CmsContext';
 import { motion } from 'motion/react';
+import { translations } from './translations';
 
 const PAGE_HASH_MAP: Record<string, PageView> = {
   '': 'home',
@@ -213,7 +214,7 @@ export default function App() {
           className="flex-1 bg-[#D4A373] hover:bg-[#c89260] active:scale-95 text-[#14281E] py-2.5 px-3 rounded-xl flex items-center justify-center space-x-1.5 text-xs font-bold shadow-md cursor-pointer transition-all"
         >
           <Calendar className="w-3.5 h-3.5" />
-          <span>Rezerwuj (-10%)</span>
+          <span>{translations[lang].homePage.roomsReserveCta}</span>
         </button>
       </motion.div>
 

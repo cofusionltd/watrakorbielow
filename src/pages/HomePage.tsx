@@ -77,27 +77,27 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className="lg:col-span-6 space-y-4">
             <div className="inline-flex items-center space-x-2 text-xs font-bold text-[#1E3A2B] uppercase tracking-widest bg-[#1E3A2B]/10 px-3 py-1 rounded-full">
               <MapPin className="w-3.5 h-3.5 text-[#1E3A2B]" />
-              <span>Beskid Żywiecki • Korbielów</span>
+              <span>{t.homePage.aboutBadge}</span>
             </div>
             <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#1E3A2B] leading-tight">
-              Górska Przystań u Stóp Pilska (1557 m n.p.m.)
+              {t.homePage.aboutTitle}
             </h2>
             <p className="text-sm text-neutral-600 leading-relaxed">
-              Watra Korbielów to wyjątkowe miejsce łączące tradycyjną beskidzką gościnność ze współczesnym komfortem. Położeni zaledwie 100 m od stoków narciarskich Cypisek i Andiamo oraz bezpośrednio przy szlaku na Halę Miziową, stanowimy idealną bazę wypadową o każdej porze roku.
+              {t.homePage.aboutDescription}
             </p>
             <div className="pt-2 flex flex-wrap gap-4">
               <button
                 onClick={() => onNavigate('about')}
                 className="bg-[#1E3A2B] hover:bg-[#2A4F3B] text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center space-x-2 transition-colors cursor-pointer"
               >
-                <span>Poznaj naszą historię</span>
+                <span>{t.homePage.aboutPrimaryCta}</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
               <button
                 onClick={() => onNavigate('contact')}
                 className="border border-neutral-300 hover:bg-neutral-50 text-neutral-700 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
               >
-                Dojazd & Mapa
+                {t.homePage.aboutSecondaryCta}
               </button>
             </div>
           </div>
@@ -121,17 +121,17 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div>
             <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-[#1E3A2B] uppercase tracking-wider mb-1">
               <Bed className="w-3.5 h-3.5" />
-              <span>Noclegi & Komfort</span>
+              <span>{t.homePage.roomsBadge}</span>
             </div>
             <h2 className="font-serif text-3xl font-bold text-[#1E3A2B]">
-              Komfortowe Pokoje i Apartamenty
+              {t.homePage.roomsTitle}
             </h2>
           </div>
           <button
             onClick={() => onNavigate('rooms')}
             className="text-xs font-bold text-[#1E3A2B] hover:text-[#C86D51] flex items-center space-x-1 uppercase tracking-wider cursor-pointer"
           >
-            <span>Zobacz pełny cennik i pokoje</span>
+            <span>{t.homePage.roomsSecondaryCta}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -170,7 +170,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   onClick={() => onOpenBooking(room.id)}
                   className="w-full bg-[#1E3A2B] hover:bg-[#2A4F3B] text-white py-2 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
                 >
-                  Rezerwuj (-10%)
+                  {t.homePage.roomsReserveCta}
                 </button>
               </div>
             </div>
@@ -195,16 +195,16 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="relative space-y-2">
               <div className="inline-flex items-center space-x-1.5 text-[10px] font-bold text-[#D4A373] uppercase tracking-wider bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-md">
                 <Waves className="w-3.5 h-3.5" />
-                <span>Strefa SPA & Relaksu</span>
+                <span>{t.homePage.wellnessBadge}</span>
               </div>
               <h3 className="font-serif text-2xl font-bold">
-                Całoroczne Jacuzzi Zewnętrzne & Sauna
+                {t.homePage.wellnessTitle}
               </h3>
               <p className="text-xs text-white/80 line-clamp-2">
-                Zanurz się w gorącej wodzie z widokiem na ośnieżone stoki Pilska lub skorzystaj z sauny fińskiej.
+                {lang === 'pl' ? 'Zanurz się w gorącej wodzie z widokiem na ośnieżone stoki Pilska lub skorzystaj z sauny fińskiej.' : t.hero.subheadline}
               </p>
               <div className="pt-1 text-xs font-bold text-[#D4A373] flex items-center space-x-1">
-                <span>Więcej o strefie wellness</span>
+                <span>{t.homePage.wellnessMore}</span>
                 <ChevronRight className="w-4 h-4" />
               </div>
             </div>
@@ -224,16 +224,16 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="relative space-y-2">
               <div className="inline-flex items-center space-x-1.5 text-[10px] font-bold text-[#D4A373] uppercase tracking-wider bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-md">
                 <Flame className="w-3.5 h-3.5" />
-                <span>Beskidzka Kuchnia & Grill</span>
+                <span>{t.homePage.restaurantBadge}</span>
               </div>
               <h3 className="font-serif text-2xl font-bold">
-                Autentyczna Karczma & Wiata Biesiadna
+                {t.homePage.restaurantTitle}
               </h3>
               <p className="text-xs text-white/80 line-clamp-2">
-                Tradycyjna kwaśnica na żeberku, placki po zbójnicku, pstrąg z potoku i regionalne biesiady przy ogniu.
+                {lang === 'pl' ? 'Tradycyjna kwaśnica na żeberku, placki po zbójnicku, pstrąg z potoku i regionalne biesiady przy ogniu.' : t.hero.subheadline}
               </p>
               <div className="pt-1 text-xs font-bold text-[#D4A373] flex items-center space-x-1">
-                <span>Zobacz menu i ofertę karczmy</span>
+                <span>{t.homePage.restaurantMore}</span>
                 <ChevronRight className="w-4 h-4" />
               </div>
             </div>
