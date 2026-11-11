@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --color-pine: #1E3A2B;
+  --color-pine-light: #2A4F3B;
+  --color-pine-dark: #14281E;
+  --color-amber-accent: #D4A373;
+  --color-terracotta: #C86D51;
+  --color-cream: #F9F8F6;
+  --color-slate-text: #222222;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+

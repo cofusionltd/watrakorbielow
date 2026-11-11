@@ -1,0 +1,6 @@
+{
+  "name": "Watra Korbielów - Ośrodek • Restauracja",
+  "description": "Nowoczesna odsłona serwisu Watra Korbielów – całorocznego ośrodka wypoczynkowego i restauracji w Beskidzie Żywieckim u stóp Pilska.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
