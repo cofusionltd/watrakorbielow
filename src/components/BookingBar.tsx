@@ -53,6 +53,7 @@ export const BookingBar: React.FC<BookingBarProps> = ({ lang, onSearch, onOpenAv
               {t.common.directDiscountBadge}
             </span>
           </div>
+
           <div className="flex items-center space-x-2 bg-black/25 px-3 py-1 rounded-full border border-white/10 text-emerald-300">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-medium">{t.bookingBar.bookingPartner}</span>
