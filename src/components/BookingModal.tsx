@@ -1,8 +1,9 @@
+import { CmsManagedImage } from './CmsManagedImage';
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Users, Check, Sparkles, ExternalLink, ShieldCheck, CheckCircle2, Bed, Phone, Mail, Clock, AlertTriangle, RefreshCw, Utensils, Coffee, Tag, AlertCircle, Percent } from 'lucide-react';
 import { Language, BookingSearchQuery, Room, PackageOffer } from '../types';
-import { translations } from '../translations';
 import { useRooms } from '../hooks/useRooms';
+import {useCms, useCmsTranslations} from '../context/CmsContext';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -21,8 +22,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   selectedPackage,
   preselectedRoomId
 }) => {
-  const t = translations[lang];
-  const { rooms } = useRooms();
+  const t = useCmsTranslations(lang);
+  const { siteSettings } = useCms();
+  const { rooms } = useRooms(lang);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const defaultCheckout = new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0];
@@ -104,7 +106,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   // Validate promo code
   const handleValidatePromo = async () => {
-    if (!promoCodeInput.trim()) return;
+    if (!siteSettings.features.promotions || !promoCodeInput.trim()) return;
     setIsValidatingPromo(true);
     try {
       const res = await fetch('/api/discounts/validate', {
@@ -142,6 +144,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   // Auto-validate initial promo code if present
   useEffect(() => {
+    if (!siteSettings.features.promotions) {
+      setPromoCodeInput('');
+      setAppliedPromo(null);
+      setPromoValidationStatus({ status: 'idle' });
+      return;
+    }
     if (initialQuery?.promoCode && !appliedPromo) {
       setPromoCodeInput(initialQuery.promoCode);
       fetch('/api/discounts/validate', {
@@ -165,7 +173,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       })
       .catch(() => {});
     }
-  }, [initialQuery?.promoCode]);
+  }, [initialQuery?.promoCode, siteSettings.features.promotions]);
 
   useEffect(() => {
     if (preselectedRoomId && preselectedRoomId !== 'all') {
@@ -367,7 +375,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                    {t.bookingBar.checkIn} (od 15:00)
+                    {t.bookingBar.checkIn} {t.bookingModalExtra.checkInFrom}
                   </label>
                   <input
                     type="date"
@@ -379,7 +387,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                    {t.bookingBar.checkOut} (do 11:00)
+                    {t.bookingBar.checkOut} {t.bookingModalExtra.checkOutUntil}
                   </label>
                   <input
                     type="date"
@@ -408,7 +416,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       {availability.conflict.description}
                     </p>
                     <div className="text-[10px] text-red-700 font-semibold">
-                      Zajęty termin: <strong>{availability.conflict.checkIn} do {availability.conflict.checkOut}</strong>.
+                      {t.bookingModalExtra.occupiedDates(availability.conflict.checkIn, availability.conflict.checkOut)}
                     </div>
                   </div>
                 ) : (
@@ -420,7 +428,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       <span className="text-[11px] text-emerald-700">Booking.com Sync</span>
                     </div>
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold">
-                      Gwarancja Ceny
+                      {t.bookingModalExtra.priceGuaranteeBadge}
                     </span>
                   </div>
                 )}
@@ -438,13 +446,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     className="w-full bg-white border border-neutral-300 rounded-xl px-3 py-2 text-xs font-medium text-neutral-800"
                   >
                     {[1, 2, 3, 4, 5, 6].map(num => (
-                      <option key={num} value={num}>{num} {num === 1 ? 'osoba' : 'osoby'}</option>
+                      <option key={num} value={num}>
+                        {num} {num === 1 ? t.bookingModalExtra.personSingle : t.bookingModalExtra.personsPlural}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                    Dzieci (0-12 lat)
+                    {t.bookingModalExtra.childrenAgeLabel}
                   </label>
                   <select
                     value={children}
@@ -452,7 +462,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     className="w-full bg-white border border-neutral-300 rounded-xl px-3 py-2 text-xs font-medium text-neutral-800"
                   >
                     {[0, 1, 2, 3, 4].map(num => (
-                      <option key={num} value={num}>{num} {num === 0 ? 'brak' : 'dzieci'}</option>
+                      <option key={num} value={num}>
+                        {num === 0 ? t.bookingModalExtra.childrenNone : `${num} ${t.bookingModalExtra.childrenPlural}`}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -461,7 +473,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               {/* Room Selection */}
               <div>
                 <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1.5">
-                  Wybierz Pokój
+                  {t.bookingModalExtra.selectRoomLabel}
                 </label>
                 <div className="space-y-2">
                   {rooms.map((room) => (
@@ -475,7 +487,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <img
+                        <CmsManagedImage
                           src={room.images[0]}
                           alt={room.name}
                           className="w-12 h-12 rounded-lg object-cover"
@@ -483,7 +495,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         <div>
                           <div className="text-xs font-bold text-[#1E3A2B]">{room.name}</div>
                           <div className="text-[11px] text-neutral-500">
-                            Maks. {room.capacity} os. • {room.bedConfig}
+                            {t.common.upToPersons(room.capacity)} • {room.bedConfig}
                           </div>
                         </div>
                       </div>
@@ -492,7 +504,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                           {room.basePrice * nights} zł
                         </div>
                         <div className="text-[10px] text-neutral-400">
-                          {nights} {nights === 1 ? 'noc' : 'noce'}
+                          {nights} {nights === 1 ? t.bookingModalExtra.nightSingle : t.bookingModalExtra.nightsPlural}
                         </div>
                       </div>
                     </div>
@@ -504,7 +516,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <div className="bg-white p-3.5 rounded-xl border border-neutral-200 space-y-2.5">
                 <div className="text-xs font-bold text-[#1E3A2B] uppercase flex items-center justify-between">
                   <span>{t.bookingModal.addOns}:</span>
-                  <span className="text-[10px] text-neutral-500 font-normal">{totalGuests} os. • {nights} {nights === 1 ? 'noc' : 'noce'}</span>
+                  <span className="text-[10px] text-neutral-500 font-normal">
+                    {totalGuests} {totalGuests === 1 ? t.bookingModalExtra.personSingle : t.bookingModalExtra.personsPlural} • {nights} {nights === 1 ? t.bookingModalExtra.nightSingle : t.bookingModalExtra.nightsPlural}
+                  </span>
                 </div>
 
                 {/* Breakfast Checkbox */}
@@ -521,7 +535,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         <Coffee className="w-3.5 h-3.5 text-amber-700 inline" />
                         <span>{t.bookingModal.breakfast}</span>
                       </div>
-                      <div className="text-[10px] text-neutral-500">35 zł/os./doba</div>
+                      <div className="text-[10px] text-neutral-500">35 {t.bookingModalExtra.perPersonPerNight}</div>
                     </div>
                   </div>
                   <span className="text-xs font-bold text-amber-900">
@@ -543,7 +557,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         <Utensils className="w-3.5 h-3.5 text-emerald-700 inline" />
                         <span>{t.bookingModal.dinner}</span>
                       </div>
-                      <div className="text-[10px] text-neutral-500">55 zł/os./doba</div>
+                      <div className="text-[10px] text-neutral-500">55 {t.bookingModalExtra.perPersonPerNight}</div>
                     </div>
                   </div>
                   <span className="text-xs font-bold text-emerald-900">
@@ -574,6 +588,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
 
               {/* Kod Rabatowy Input Box */}
+              {siteSettings.features.promotions && (
               <div className="bg-white p-3.5 rounded-2xl border border-neutral-200/90 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-bold text-neutral-800 uppercase tracking-wider flex items-center space-x-1.5">
@@ -582,7 +597,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </label>
                   {appliedPromo && (
                     <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
-                      AKTYWNY (-{appliedPromo.discountPercentage}%)
+                      {t.bookingModalExtra.promoActive(appliedPromo.discountPercentage)}
                     </span>
                   )}
                 </div>
@@ -622,7 +637,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 {promoValidationStatus.status === 'valid' && appliedPromo && (
                   <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 font-medium flex items-center space-x-2">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span><strong>{appliedPromo.title}:</strong> Naliczono -{appliedPromo.discountPercentage}% rabatu!</span>
+                    <span>{t.bookingModalExtra.promoAppliedSuccess(appliedPromo.title, appliedPromo.discountPercentage)}</span>
                   </div>
                 )}
                 {promoValidationStatus.status === 'invalid' && (
@@ -632,11 +647,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </div>
                 )}
               </div>
+              )}
 
               {/* Price Calculation Box */}
               <div className="bg-[#1E3A2B] text-white p-4 rounded-2xl shadow-inner space-y-2 text-xs">
                 <div className="flex justify-between text-white/70">
-                  <span>Cena standardowa ({nights} noce):</span>
+                  <span>{t.bookingModalExtra.standardPriceForNights(nights)}</span>
                   <span>{basePriceTotal} zł</span>
                 </div>
                 <div className="flex justify-between text-[#D4A373] font-bold">
@@ -649,13 +665,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
                 {breakfastCost > 0 && (
                   <div className="flex justify-between text-white/80">
-                    <span>{t.bookingModal.breakfast} ({totalGuests} os. x {nights} nocy):</span>
+                    <span>{t.bookingModal.breakfast} ({totalGuests} {totalGuests === 1 ? t.bookingModalExtra.personSingle : t.bookingModalExtra.personsPlural} x {nights} {nights === 1 ? t.bookingModalExtra.nightSingle : t.bookingModalExtra.nightsPlural}):</span>
                     <span>+{breakfastCost} zł</span>
                   </div>
                 )}
                 {dinnerCost > 0 && (
                   <div className="flex justify-between text-white/80">
-                    <span>{t.bookingModal.dinner} ({totalGuests} os. x {nights} nocy):</span>
+                    <span>{t.bookingModal.dinner} ({totalGuests} {totalGuests === 1 ? t.bookingModalExtra.personSingle : t.bookingModalExtra.personsPlural} x {nights} {nights === 1 ? t.bookingModalExtra.nightSingle : t.bookingModalExtra.nightsPlural}):</span>
                     <span>+{dinnerCost} zł</span>
                   </div>
                 )}
@@ -678,8 +694,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       {grandTotalDirect} zł
                     </span>
                     <div className="text-[10px] text-white/60">
-                      {includeBreakfast ? 'zawiera śniadanie' : 'bez śniadania'}
-                      {includeDinner ? ' + obiadokolację' : ''} & darmowy parking
+                      {includeBreakfast ? t.bookingModalExtra.includesBreakfast : t.bookingModalExtra.noBreakfast}
+                      {includeDinner ? t.bookingModalExtra.plusDinner : ''} {t.bookingModalExtra.freeParkingIncluded}
                     </div>
                   </div>
                 </div>
@@ -825,26 +841,26 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-1.5 font-bold">
                       <ShieldCheck className="w-4 h-4 text-[#1E3A2B]" />
-                      <span>Oficjalna Rezerwacja Bezpośrednia Watra</span>
+                      <span>{t.bookingModalExtra.officialDirectTitle}</span>
                     </div>
                     <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                      <span>Sync z Booking.com: Aktywny</span>
+                      <span>{t.bookingModalExtra.syncActiveBadge}</span>
                     </span>
                   </div>
 
                   <p className="text-neutral-600 text-[11px] leading-relaxed">
-                    Wszystkie rezerwacje realizowane są bezpośrednio na naszej stronie. Zintegrowany moduł Channel Managera natychmiast blokuje terminy na portalu Booking.com, wykluczając ryzyko podwójnej rezerwacji (overbooking).
+                    {t.bookingModalExtra.channelManagerInfo}
                   </p>
 
                   <div className="grid grid-cols-2 gap-2 text-[10px] text-neutral-700 pt-1 border-t border-[#1E3A2B]/10">
                     <div className="flex items-center space-x-1.5">
                       <Check className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>10% taniej niż na portalach OTA</span>
+                      <span>{t.bookingModalExtra.cheaperThanOta}</span>
                     </div>
                     <div className="flex items-center space-x-1.5">
                       <Check className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>Darmowy monitorowany parking</span>
+                      <span>{t.bookingModalExtra.freeMonitoredParking}</span>
                     </div>
                   </div>
                 </div>

@@ -1,7 +1,8 @@
+import { CmsManagedImage } from '../components/CmsManagedImage';
 import React, { useState } from 'react';
 import { Language, Room } from '../types';
-import { translations } from '../translations';
 import { useRooms } from '../hooks/useRooms';
+import {useCms, useCmsTranslations} from '../context/CmsContext';
 import { Bed, Users, Maximize, Check, Calendar, Sparkles, ShieldCheck, Eye, X } from 'lucide-react';
 
 interface RoomsPageProps {
@@ -10,8 +11,9 @@ interface RoomsPageProps {
 }
 
 export const RoomsPage: React.FC<RoomsPageProps> = ({ lang, onSelectRoom }) => {
-  const { rooms } = useRooms();
-  const t = translations[lang];
+  const { rooms } = useRooms(lang);
+  const { siteSettings } = useCms();
+  const t = useCmsTranslations(lang);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'double' | 'family' | 'suite'>('all');
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
@@ -103,7 +105,7 @@ export const RoomsPage: React.FC<RoomsPageProps> = ({ lang, onSelectRoom }) => {
                     onClick={() => setLightboxImage(room.images[0])}
                     className="relative h-64 rounded-2xl overflow-hidden cursor-pointer group"
                   >
-                    <img
+                    <CmsManagedImage
                       src={room.images[0]}
                       alt={room.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -122,7 +124,7 @@ export const RoomsPage: React.FC<RoomsPageProps> = ({ lang, onSelectRoom }) => {
                         onClick={() => setLightboxImage(img)}
                         className="h-16 rounded-xl overflow-hidden cursor-pointer border border-neutral-200"
                       >
-                        <img src={img} alt="" className="w-full h-full object-cover hover:opacity-80" />
+                        <CmsManagedImage src={img} alt="" className="w-full h-full object-cover hover:opacity-80" />
                       </div>
                     ))}
                   </div>
@@ -190,13 +192,13 @@ export const RoomsPage: React.FC<RoomsPageProps> = ({ lang, onSelectRoom }) => {
                       </div>
                     </div>
 
-                    <button
+                    {siteSettings.features.reservations && <button
                       onClick={() => onSelectRoom(room.id)}
                       className="bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider shadow-md transition-colors flex items-center justify-center space-x-2 cursor-pointer"
                     >
                       <Calendar className="w-4 h-4" />
                       <span>{t.roomsPage.bookThisRoom}</span>
-                    </button>
+                    </button>}
                   </div>
                 </div>
               </div>
@@ -211,7 +213,7 @@ export const RoomsPage: React.FC<RoomsPageProps> = ({ lang, onSelectRoom }) => {
             onClick={() => setLightboxImage(null)}
           >
             <div className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl">
-              <img src={lightboxImage} alt="" className="w-full h-full object-contain" />
+              <CmsManagedImage src={lightboxImage} alt="" className="w-full h-full object-contain" />
               <button
                 onClick={() => setLightboxImage(null)}
                 className="absolute top-4 right-4 bg-black/60 text-white p-2 rounded-full hover:bg-black/90"

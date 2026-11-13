@@ -1,6 +1,8 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
-import fs from "fs";
+import { randomUUID } from "crypto";
+import { sql } from "drizzle-orm";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { handleAnalyticsHeartbeat, handleGetRealtimeAnalytics } from "./server/analytics";
@@ -11,11 +13,20 @@ import {
   dbDeletePromotion,
   dbGetReservations,
   dbCreateReservation,
+  dbCreateReservationIfAvailable,
+  dbFindReservationConflict,
   dbUpdateReservationStatus,
   dbGetAiKnowledge,
   dbUpsertAiKnowledge,
+  dbUpdateAiKnowledge,
   dbDeleteAiKnowledge,
   dbUpsertChatSession,
+  dbGetChatSession,
+  dbGetRooms,
+  dbGetMediaAssets,
+  dbGetMediaAsset,
+  dbSaveMediaAsset,
+  dbDeleteMediaAsset,
 } from "./src/db/repository.ts";
 import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
 import { getUsers, getOrCreateUser } from "./src/db/users.ts";
@@ -34,6 +45,7 @@ import {
   handleGetGuestMessages,
   handleSendGuestMessage,
   handleGetMyGuestMessages,
+  handleSubmitContactInquiry,
 } from "./server/guests.ts";
 import {
   handleGetChatSessions,
@@ -41,19 +53,22 @@ import {
   handleToggleChatTakeover,
   handleAdminSendMessage,
   handleTranslate,
-  liveChatSessions,
   translateText,
 } from "./server/chatAdmin.ts";
 import {
   handleGetCmsContent,
   handleUpdateCmsContent,
-  handleResetCmsContent
+  handleResetCmsContent,
+  hasCmsImageReference
 } from "./server/cms.ts";
 import { discountsManager } from "./server/discounts.ts";
 import { validateEnvironment } from "./server/env.ts";
 import { requireAdminAuth, handleAdminLogin } from "./server/adminAuth.ts";
-import { chatRateLimiter, bookingRateLimiter, adminLoginRateLimiter } from "./server/rateLimiters.ts";
+import { getSiteSettings, SiteSettingsValidationError, updateSiteSettings } from "./server/siteSettings.ts";
+import { chatRateLimiter, bookingRateLimiter, contactInquiryRateLimiter, adminLoginRateLimiter } from "./server/rateLimiters.ts";
 import { logger, requestLoggingMiddleware } from "./server/logger.ts";
+import { db } from "./src/db/index.ts";
+import { initializeDatabase } from "./server/bootstrap.ts";
 
 export interface AiKnowledgeDoc {
   id: string;
@@ -103,8 +118,60 @@ interface ReservationRecord {
   bookingComRef?: string;
 }
 
-// In-memory persistent state for campaigns and reservations
-let promotionalCampaigns: PromotionalCampaign[] = [
+const mapReservation = (row: Awaited<ReturnType<typeof dbGetReservations>>[number]): ReservationRecord => ({
+  id: row.id,
+  createdAt: row.createdAt?.toISOString() || '',
+  roomId: row.roomId,
+  guestName: row.guestName,
+  guestEmail: row.guestEmail,
+  guestPhone: row.guestPhone,
+  checkIn: row.checkIn,
+  checkOut: row.checkOut,
+  adults: row.adults,
+  children: row.children,
+  totalAmount: row.totalPrice,
+  paymentMethod: row.paymentMethod,
+  specialRequests: row.specialRequests || undefined,
+  addons: Array.isArray(row.addons) ? row.addons as string[] : [],
+  status: row.status === 'confirmed' ? 'Potwierdzona' : row.status === 'cancelled' ? 'Anulowana' : 'Oczekuje na zaliczkę',
+  source: row.source === 'booking.com' ? 'booking_com' : 'website',
+  bookingComRef: row.bookingComRef || undefined,
+});
+
+const mapPromotion = (row: Awaited<ReturnType<typeof dbGetPromotions>>[number]): PromotionalCampaign => {
+  const metadata = row.metadata && typeof row.metadata === 'object'
+    ? row.metadata as Record<string, unknown>
+    : {};
+  const category = metadata.category;
+  return {
+    id: row.id,
+    title: row.title,
+    subtitle: typeof metadata.subtitle === 'string' ? metadata.subtitle : '',
+    badge: row.badge,
+    discountPercentage: row.discountPercent,
+    promoCode: row.promoCode,
+    startDate: row.startsAt,
+    endDate: row.endsAt,
+    category: category === 'winter' || category === 'summer' || category === 'wellness' ? category : 'all',
+    imageUrl: typeof metadata.imageUrl === 'string' ? metadata.imageUrl : '',
+    active: row.active,
+    publishedAt: typeof metadata.publishedAt === 'string' ? metadata.publishedAt : row.createdAt?.toISOString() || '',
+    description: row.description,
+    perks: Array.isArray(metadata.perks) ? metadata.perks.filter((perk): perk is string => typeof perk === 'string') : [],
+  };
+};
+
+const asyncRoute = (
+  handler: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<unknown>
+): express.RequestHandler => (req, res, next) => {
+  void handler(req, res, next).catch((error) => {
+    logger.error(`Async route failed for ${req.method} ${req.originalUrl}`, { error });
+    if (res.headersSent) return next(error);
+    return res.status(503).json({ error: "The requested operation could not be completed because a required service failed." });
+  });
+};
+
+const defaultCampaigns: PromotionalCampaign[] = [
   {
     id: "camp-winter-early",
     title: "First Minute: Zima na Stoku 2026",
@@ -170,100 +237,7 @@ let promotionalCampaigns: PromotionalCampaign[] = [
   }
 ];
 
-let reservationsStore: ReservationRecord[] = [
-  {
-    id: "WATRA-884210",
-    createdAt: "2026-09-09T14:32:00Z",
-    roomId: "room-2-comfort",
-    guestName: "Piotr Wiśniewski",
-    guestEmail: "p.wisniewski@example.com",
-    guestPhone: "+48 602 111 222",
-    checkIn: "2026-10-15",
-    checkOut: "2026-10-18",
-    adults: 2,
-    children: 0,
-    totalAmount: 513,
-    paymentMethod: "transfer",
-    specialRequests: "Prośba o pokój z widokiem na las na 2. piętrze",
-    addons: ["Seans Jacuzzi"],
-    status: "Potwierdzona",
-    source: "website"
-  },
-  {
-    id: "BKG-992147",
-    createdAt: "2026-09-10T11:20:00Z",
-    roomId: "room-2-comfort",
-    guestName: "Martin Novák (Booking.com)",
-    guestEmail: "m.novak@guest.booking.com",
-    guestPhone: "+421 905 442 119",
-    checkIn: "2026-10-23",
-    checkOut: "2026-10-26",
-    adults: 2,
-    children: 0,
-    totalAmount: 570,
-    paymentMethod: "booking_virtual_card",
-    specialRequests: "Arriving late around 20:00. Non-smoking room.",
-    status: "Potwierdzona",
-    source: "booking_com",
-    bookingComRef: "BKG-4829104820"
-  },
-  {
-    id: "WATRA-741932",
-    createdAt: "2026-09-10T18:15:00Z",
-    roomId: "room-family-3-4",
-    guestName: "Marek & Joanna Dąbrowscy",
-    guestEmail: "m.dabrowski@example.com",
-    guestPhone: "+48 501 333 444",
-    checkIn: "2026-12-27",
-    checkOut: "2027-01-02",
-    adults: 2,
-    children: 2,
-    totalAmount: 1680,
-    paymentMethod: "arrival",
-    specialRequests: "Ferie noworoczne z dziećmi, wypożyczenie nart",
-    addons: ["Wypożyczalnia nart"],
-    status: "Oczekuje na zaliczkę",
-    source: "website"
-  },
-  {
-    id: "BKG-883102",
-    createdAt: "2026-09-11T02:10:00Z",
-    roomId: "room-family-3-4",
-    guestName: "Klaus & Andrea Schmidt (Booking.com)",
-    guestEmail: "klaus.schmidt@guest.booking.com",
-    guestPhone: "+49 170 882 391",
-    checkIn: "2027-01-15",
-    checkOut: "2027-01-20",
-    adults: 2,
-    children: 1,
-    totalAmount: 1400,
-    paymentMethod: "booking_virtual_card",
-    specialRequests: "Room with balcony facing slopes if possible",
-    status: "Potwierdzona",
-    source: "booking_com",
-    bookingComRef: "BKG-5910248102"
-  },
-  {
-    id: "BKG-771203",
-    createdAt: "2026-09-10T09:00:00Z",
-    roomId: "room-suite-deluxe",
-    guestName: "Tomasz Kamiński (Booking.com)",
-    guestEmail: "t.kaminski@guest.booking.com",
-    guestPhone: "+48 600 777 888",
-    checkIn: "2026-11-06",
-    checkOut: "2026-11-09",
-    adults: 2,
-    children: 0,
-    totalAmount: 1050,
-    paymentMethod: "booking_virtual_card",
-    status: "Potwierdzona",
-    source: "booking_com",
-    bookingComRef: "BKG-6029173841"
-  }
-];
-
-// Dynamic AI Knowledge Base Store (fed & trained from Admin Panel)
-let aiKnowledgeStore: AiKnowledgeDoc[] = [
+const defaultAiKnowledge: AiKnowledgeDoc[] = [
   {
     id: "doc-1",
     title: "Kompendium Ośrodka Watra Korbielów & Regulamin",
@@ -346,6 +320,7 @@ Specjalności szefa kuchni:
 
 async function startServer() {
   const { PORT } = validateEnvironment();
+  await initializeDatabase({ campaigns: defaultCampaigns, knowledge: defaultAiKnowledge });
   const app = express();
 
   // Trust first proxy hop (e.g. Cloud Run, reverse proxy)
@@ -373,8 +348,17 @@ async function startServer() {
   }
 
   // Health check
-  app.get("/api/health", (_req, res) => {
+  app.get("/api/health", async (_req, res) => {
     const hasDatabaseConfig = !!(process.env.DATABASE_URL || (process.env.SQL_HOST && process.env.SQL_USER && process.env.SQL_PASSWORD && process.env.SQL_DB_NAME));
+    let databaseConnected = false;
+    if (hasDatabaseConfig) {
+      try {
+        await db.execute(sql`SELECT 1`);
+        databaseConnected = true;
+      } catch (error) {
+        logger.error("Database health check failed", { error });
+      }
+    }
 
     res.json({
       status: "ok",
@@ -383,8 +367,8 @@ async function startServer() {
       location: "Korbielów, Beskid Żywiecki",
       databaseType: "postgresql",
       databaseConfigured: hasDatabaseConfig,
-      databaseConnected: hasDatabaseConfig,
-      cloudSqlConnected: hasDatabaseConfig,
+      databaseConnected,
+      cloudSqlConnected: databaseConnected,
       bookingApiConnected: true,
       geminiAiConnected: !!process.env.GEMINI_API_KEY,
       timestamp: new Date().toISOString()
@@ -762,7 +746,7 @@ async function startServer() {
   });
 
   // Booking availability search & quote calculation
-  app.post("/api/booking/search", (req, res) => {
+  app.post("/api/booking/search", asyncRoute(async (req, res) => {
     const { checkIn, checkOut, adults = 2, children = 0, roomType = "all", promoCode } = req.body;
 
     const startDate = checkIn ? new Date(checkIn) : new Date();
@@ -771,79 +755,43 @@ async function startServer() {
 
     // Check if valid promo code applied
     let promoDiscountPercent = 10; // default 10% direct booking discount
-    let appliedPromoCampaign: any = null;
-    if (promoCode) {
-      const discountValidation = discountsManager.validateCode(promoCode);
+    let appliedPromoCampaign: { promoCode: string; title: string; discountPercentage: number } | null = null;
+    const settings = await getSiteSettings();
+    if (promoCode && settings.features.promotions) {
+      const discountValidation = await discountsManager.validateCode(promoCode);
       if (discountValidation.valid && discountValidation.discountPercentage) {
         promoDiscountPercent = Math.max(promoDiscountPercent, discountValidation.discountPercentage);
         appliedPromoCampaign = {
-          promoCode: discountValidation.code,
-          title: discountValidation.title,
+          promoCode: discountValidation.code!,
+          title: discountValidation.title!,
           discountPercentage: discountValidation.discountPercentage
         };
       } else {
-        const found = promotionalCampaigns.find(c => c.active && c.promoCode.toUpperCase() === promoCode.trim().toUpperCase());
+        const found = (await dbGetPromotions()).find(c => c.active && c.promoCode.toUpperCase() === promoCode.trim().toUpperCase());
         if (found) {
-          appliedPromoCampaign = found;
-          promoDiscountPercent = Math.max(promoDiscountPercent, found.discountPercentage);
+          appliedPromoCampaign = {
+            promoCode: found.promoCode,
+            title: found.title,
+            discountPercentage: found.discountPercent
+          };
+          promoDiscountPercent = Math.max(promoDiscountPercent, found.discountPercent);
         }
       }
     }
 
-    const roomsCatalog = [
-      {
-        id: "room-2-standard",
-        name: "Pokój 2-osobowy Standard",
-        type: "double",
-        capacity: 2,
-        basePricePerNight: 160,
-        breakfastIncluded: true,
-        availableCount: 4,
-        size: "18 m²",
-        bedConfig: "1 łóżko małżeńskie lub 2 pojedyncze",
-        image: "/images/image-22.jpg",
-        amenities: ["Wi-Fi", "Prywatna łazienka", "TV LED", "Balkon z widokiem", "Ręczniki", "Zestaw kosmetyków"]
-      },
-      {
-        id: "room-2-comfort",
-        name: "Pokój 2-osobowy Comfort z Balkonem",
-        type: "double",
-        capacity: 2,
-        basePricePerNight: 190,
-        breakfastIncluded: true,
-        availableCount: 3,
-        size: "22 m²",
-        bedConfig: "1 łoże małżeńskie typu King-Size",
-        image: "/images/image-23.jpg",
-        amenities: ["Wi-Fi", "Prywatna łazienka", "TV LED 43\"", "Duży balkon", "Lodówka", "Czajnik", "Widok na las i Pilsko"]
-      },
-      {
-        id: "room-family-3-4",
-        name: "Pokój Rodzinny 3-4 osobowy (Studio)",
-        type: "family",
-        capacity: 4,
-        basePricePerNight: 280,
-        breakfastIncluded: true,
-        availableCount: 2,
-        size: "32 m²",
-        bedConfig: "1 łóżko podwójne + 2 pojedyncze",
-        image: "/images/image-24.jpg",
-        amenities: ["Wi-Fi", "Przestronna łazienka", "Kącik wypoczynkowy ze stolikiem", "TV", "Balkon", "Lodówka"]
-      },
-      {
-        id: "room-suite-deluxe",
-        name: "Apartament Górski z Tarasem & Salonem",
-        type: "suite",
-        capacity: 5,
-        basePricePerNight: 390,
-        breakfastIncluded: true,
-        availableCount: 2,
-        size: "45 m²",
-        bedConfig: "Sypialnia (King-Size) + Salon (rozkładana sofa narożna)",
-        image: "/images/image-25.jpg",
-        amenities: ["Wi-Fi", "Prywatny taras widokowy", "Strefa dzienna z jadalnią", "Ekspres do kawy", "Szlafroki do jacuzzi"]
-      }
-    ];
+    const roomsCatalog = (await dbGetRooms()).filter(room => room.active).map(room => ({
+      id: room.id,
+      name: room.name,
+      type: room.category,
+      capacity: room.capacity,
+      basePricePerNight: room.basePrice,
+      breakfastIncluded: true,
+      availableCount: 1,
+      size: room.size,
+      bedConfig: room.bedConfig,
+      image: JSON.parse(room.images)[0],
+      amenities: JSON.parse(room.tags),
+    }));
 
     const filteredRooms = roomType === "all" 
       ? roomsCatalog 
@@ -889,10 +837,10 @@ async function startServer() {
         "Elastyczne bezpłatne odwołanie do 7 dni przed przyjazdem"
       ]
     });
-  });
+  }));
 
   // Real-time Availability Check & Double-Booking Protection Endpoint
-  app.get("/api/booking/check-availability", (req, res) => {
+  app.get("/api/booking/check-availability", asyncRoute(async (req, res) => {
     const { roomId, checkIn, checkOut } = req.query;
 
     if (!roomId || !checkIn || !checkOut) {
@@ -906,15 +854,10 @@ async function startServer() {
     const cOut = String(checkOut);
 
     // Conflict check formula: checkIn < existing.checkOut && checkOut > existing.checkIn
-    const conflictingReservation = reservationsStore.find(r => 
-      r.roomId === roomId &&
-      r.status !== "Anulowana" &&
-      cIn < r.checkOut &&
-      cOut > r.checkIn
-    );
+    const conflictingReservation = await dbFindReservationConflict(String(roomId), cIn, cOut);
 
     if (conflictingReservation) {
-      const isBookingCom = conflictingReservation.source === "booking_com";
+      const isBookingCom = conflictingReservation.source === "booking.com";
       return res.json({
         available: false,
         conflict: {
@@ -938,12 +881,14 @@ async function startServer() {
       message: "Pokój jest w pełni wolny w wybranym terminie. Dokonanie rezerwacji natychmiast zablokuje ten termin na Booking.com.",
       syncedWithBookingCom: true
     });
-  });
+  }));
 
   // Blocked Dates Calendar by Room (for calendar UI display & sync inspection)
-  app.get("/api/booking/calendar/:roomId", (req, res) => {
+  app.get("/api/booking/calendar/:roomId", asyncRoute(async (req, res) => {
     const { roomId } = req.params;
-    const roomReservations = reservationsStore.filter(r => r.roomId === roomId && r.status !== "Anulowana");
+    const roomReservations = (await dbGetReservations())
+      .filter(row => row.roomId === roomId && row.status !== "cancelled")
+      .map(mapReservation);
     
     const blockedRanges = roomReservations.map(r => ({
       id: r.id,
@@ -960,10 +905,10 @@ async function startServer() {
       syncedWithBookingCom: true,
       lastSync: new Date().toISOString()
     });
-  });
+  }));
 
   // Direct reservation submission endpoint with Double-Booking Locking
-  app.post("/api/booking/reserve", bookingRateLimiter, async (req, res) => {
+  app.post("/api/booking/reserve", bookingRateLimiter, asyncRoute(async (req, res) => {
     const {
       roomId,
       checkIn,
@@ -980,83 +925,55 @@ async function startServer() {
       promoCode
     } = req.body;
 
+    const settings = await getSiteSettings();
+    if (!settings.features.reservations) {
+      return res.status(403).json({ error: "Rezerwacje online są obecnie wyłączone. Prosimy o kontakt telefoniczny." });
+    }
+    if (promoCode && !settings.features.promotions) {
+      return res.status(403).json({ error: "Kody promocyjne są obecnie wyłączone." });
+    }
+
     if (!guestName || !guestEmail || !guestPhone) {
       return res.status(400).json({ error: "Proszę uzupełnić imię, nazwisko, email oraz numer telefonu." });
     }
-
-    // Atomic Double-Booking Conflict check before creating reservation
-    const conflict = reservationsStore.find(r => 
-      r.roomId === roomId &&
-      r.status !== "Anulowana" &&
-      checkIn < r.checkOut &&
-      checkOut > r.checkIn
-    );
-
-    if (conflict) {
-      const isBookingCom = conflict.source === "booking_com";
-      return res.status(409).json({
-        error: isBookingCom
-          ? `Ten termin (${conflict.checkIn} – ${conflict.checkOut}) został w międzyczasie zarezerwowany na Booking.com. Aby zapobiec podwójnej rezerwacji (overbooking), wybierz inny pokój lub inne daty.`
-          : `Ten termin (${conflict.checkIn} – ${conflict.checkOut}) został w międzyczasie zarezerwowany. Wybierz inne daty.`
-      });
+    if (typeof roomId !== 'string' || typeof checkIn !== 'string' || typeof checkOut !== 'string'
+      || !/^\d{4}-\d{2}-\d{2}$/.test(checkIn) || !/^\d{4}-\d{2}-\d{2}$/.test(checkOut) || checkIn >= checkOut) {
+      return res.status(400).json({ error: "Wprowadź pokój i prawidłowy zakres dat." });
     }
 
     const reservationId = `WATRA-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const newRecord: ReservationRecord = {
+    const includeBreakfast = Boolean(req.body.includeBreakfast || (Array.isArray(addons) && addons.some((a: string) => a.toLowerCase().includes("śniad") || a.toLowerCase().includes("breakfast"))));
+    const includeDinner = Boolean(req.body.includeDinner || (Array.isArray(addons) && addons.some((a: string) => a.toLowerCase().includes("obiad") || a.toLowerCase().includes("kolac") || a.toLowerCase().includes("dinner"))));
+
+    const created = await dbCreateReservationIfAvailable({
       id: reservationId,
-      createdAt: new Date().toISOString(),
-      roomId,
       guestName,
       guestEmail,
       guestPhone,
+      roomId,
       checkIn,
       checkOut,
       adults: Number(adults) || 2,
       children: Number(children) || 0,
-      totalAmount: Number(totalAmount) || 0,
+      totalPrice: Number(totalAmount) || 0,
+      status: "pending",
+      source: "direct",
+      specialRequests: specialRequests || undefined,
+      includeBreakfast,
+      includeDinner,
       paymentMethod,
-      specialRequests,
-      addons,
-      status: "Oczekuje na zaliczkę",
-      source: "website"
-    };
-
-    const includeBreakfast = Boolean(req.body.includeBreakfast || (Array.isArray(addons) && addons.some((a: string) => a.toLowerCase().includes("śniad") || a.toLowerCase().includes("breakfast"))));
-    const includeDinner = Boolean(req.body.includeDinner || (Array.isArray(addons) && addons.some((a: string) => a.toLowerCase().includes("obiad") || a.toLowerCase().includes("kolac") || a.toLowerCase().includes("dinner"))));
-
-    reservationsStore.unshift(newRecord);
-
-    // If promo code was applied, register redemption in discountsManager
-    if (promoCode) {
-      try {
-        discountsManager.redeemCode(promoCode);
-      } catch (e) {
-        console.warn("Could not redeem discount code:", e);
-      }
+      addons: Array.isArray(addons) ? addons.map(String) : [],
+      promoCode: promoCode || undefined,
+    });
+    if (created.conflict) {
+      return res.status(409).json({
+        error: `Ten termin (${created.conflict.checkIn} – ${created.conflict.checkOut}) został w międzyczasie zarezerwowany. Wybierz inne daty.`
+      });
     }
 
-    // Save to Cloud SQL PostgreSQL database asynchronously
-    try {
-      await dbCreateReservation({
-        id: reservationId,
-        guestName,
-        guestEmail,
-        guestPhone,
-        roomId,
-        checkIn,
-        checkOut,
-        adults: Number(adults) || 2,
-        children: Number(children) || 0,
-        totalPrice: Number(totalAmount) || 0,
-        status: "pending",
-        source: "direct",
-        specialRequests: specialRequests || undefined,
-        includeBreakfast,
-        includeDinner,
-      });
-    } catch (dbErr) {
-      console.warn("Failed saving reservation to Cloud SQL:", dbErr);
+    if (promoCode) {
+      await discountsManager.redeemCode(promoCode);
     }
 
     res.json({
@@ -1085,12 +1002,14 @@ async function startServer() {
         }
       }
     });
-  });
+  }));
 
   // Standard RFC 5545 iCalendar (.ics) Feed Export for Booking.com Extranet
-  app.get("/api/booking/ical/:roomId.ics", (req, res) => {
+  app.get("/api/booking/ical/:roomId.ics", asyncRoute(async (req, res) => {
     const { roomId } = req.params;
-    const roomReservations = reservationsStore.filter(r => r.roomId === roomId && r.status !== "Anulowana");
+    const roomReservations = (await dbGetReservations())
+      .filter(row => row.roomId === roomId && row.status !== "cancelled")
+      .map(mapReservation);
 
     const lines: string[] = [
       "BEGIN:VCALENDAR",
@@ -1122,22 +1041,18 @@ async function startServer() {
     res.setHeader("Content-Type", "text/calendar; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${roomId}.ics"`);
     res.send(lines.join("\r\n"));
-  });
+  }));
 
   // Booking.com Channel Sync Status API
-  app.get("/api/booking/sync-bookingcom", (req, res) => {
+  app.get("/api/booking/sync-bookingcom", asyncRoute(async (req, res) => {
     const host = req.get("host") || "localhost:3000";
     const protocol = req.protocol || "http";
 
-    const allRooms = [
-      { id: "room-2-comfort", name: "Pokój 2-osobowy Comfort" },
-      { id: "room-family-3-4", name: "Pokój Rodzinny 3-4 os." },
-      { id: "room-suite-deluxe", name: "Apartament Górski Deluxe" },
-      { id: "room-standard-balcony", name: "Pokój Standard z Balkonem" }
-    ];
+    const allRooms = await dbGetRooms();
+    const reservations = (await dbGetReservations()).map(mapReservation);
 
     const syncedRooms = allRooms.map(r => {
-      const roomBookings = reservationsStore.filter(b => b.roomId === r.id && b.status !== "Anulowana");
+      const roomBookings = reservations.filter(b => b.roomId === r.id && b.status !== "Anulowana");
       return {
         roomId: r.id,
         roomName: r.name,
@@ -1168,10 +1083,10 @@ async function startServer() {
       },
       syncedRooms
     });
-  });
+  }));
 
   // Admin trigger immediate sync with Booking.com or simulate new external booking
-  app.post("/api/booking/sync-bookingcom", (req, res) => {
+  app.post("/api/booking/sync-bookingcom", asyncRoute(async (req, res) => {
     const { action, newBooking } = req.body;
 
     if (action === "simulate_bookingcom_reservation" && newBooking) {
@@ -1179,7 +1094,7 @@ async function startServer() {
       const importedRecord: ReservationRecord = {
         id: bkgId,
         createdAt: new Date().toISOString(),
-        roomId: newBooking.roomId || "room-2-comfort",
+        roomId: newBooking.roomId,
         guestName: newBooking.guestName || "Gość z Booking.com",
         guestEmail: newBooking.guestEmail || "guest@booking.com",
         guestPhone: newBooking.guestPhone || "+48 500 111 222",
@@ -1194,22 +1109,24 @@ async function startServer() {
         source: "booking_com",
         bookingComRef: `BKG-${Math.floor(1000000000 + Math.random() * 9000000000)}`
       };
+      if (!importedRecord.roomId || !importedRecord.checkIn || !importedRecord.checkOut) {
+        return res.status(400).json({ error: "Pokój i daty rezerwacji są wymagane." });
+      }
 
-      // Conflict check
-      const conflict = reservationsStore.find(r =>
-        r.roomId === importedRecord.roomId &&
-        r.status !== "Anulowana" &&
-        importedRecord.checkIn < r.checkOut &&
-        importedRecord.checkOut > r.checkIn
-      );
-
-      if (conflict) {
+      const created = await dbCreateReservationIfAvailable({
+        ...importedRecord,
+        totalPrice: importedRecord.totalAmount,
+        status: "confirmed",
+        source: "booking.com",
+        paymentMethod: importedRecord.paymentMethod,
+        bookingComRef: importedRecord.bookingComRef,
+      });
+      if (created.conflict) {
         return res.status(409).json({
-          error: `Wykryto kolizję dat z istniejącą rezerwacją ${conflict.id} (${conflict.checkIn} do ${conflict.checkOut}). System ochrony przed overbookingiem zablokował import.`
+          error: `Wykryto kolizję dat z istniejącą rezerwacją ${created.conflict.id} (${created.conflict.checkIn} do ${created.conflict.checkOut}). System ochrony przed overbookingiem zablokował import.`
         });
       }
 
-      reservationsStore.unshift(importedRecord);
       return res.json({
         success: true,
         message: "Pomyślnie zaimportowano rezerwację z Booking.com. Dostępność pokoju została zaktualizowana w czasie rzeczywistym.",
@@ -1222,81 +1139,28 @@ async function startServer() {
       message: "Dwukierunkowa synchronizacja z Booking.com przebiegła pomyślnie. Wszystkie kalendarze i terminy są aktualne.",
       syncedAt: new Date().toISOString()
     });
-  });
+  }));
 
   // ==========================================
   // PROMOTIONAL CAMPAIGNS API (PUBLIC & ADMIN)
   // ==========================================
 
   // Public: Get all active published promotional campaigns
-  app.get("/api/campaigns", async (_req, res) => {
-    try {
-      const rows = await dbGetPromotions();
-      if (rows && rows.length > 0) {
-        const mapped: PromotionalCampaign[] = rows.filter(r => r.active).map(r => ({
-          id: r.id,
-          title: r.title,
-          subtitle: "Wyjątkowa oferta pobytowa w Beskidach",
-          badge: r.badge,
-          discountPercentage: r.discountPercent,
-          promoCode: r.promoCode,
-          startDate: r.startsAt,
-          endDate: r.endsAt,
-          category: "all",
-          imageUrl: "/images/image-13.jpg",
-          active: r.active,
-          publishedAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
-          description: r.description,
-          perks: [
-            `${r.discountPercent}% rabatu na pobyt`,
-            "Darmowy parking i szybkie Wi-Fi",
-            "Kieliszek nalewki powitalnej"
-          ]
-        }));
-        return res.json(mapped);
-      }
-    } catch (dbErr) {
-      console.warn("DB campaigns query fallback:", dbErr);
+  app.get("/api/campaigns", asyncRoute(async (_req, res) => {
+    if (!(await getSiteSettings()).features.promotions) {
+      return res.json([]);
     }
-    const active = promotionalCampaigns.filter(c => c.active);
-    res.json(active);
-  });
+    const active = (await dbGetPromotions()).filter(campaign => campaign.active).map(mapPromotion);
+    return res.json(active);
+  }));
 
   // Admin: Get all campaigns (active and inactive)
-  app.get("/api/admin/campaigns", async (_req, res) => {
-    try {
-      const rows = await dbGetPromotions();
-      if (rows && rows.length > 0) {
-        const mapped: PromotionalCampaign[] = rows.map(r => ({
-          id: r.id,
-          title: r.title,
-          subtitle: "Wyjątkowa oferta pobytowa w Beskidach",
-          badge: r.badge,
-          discountPercentage: r.discountPercent,
-          promoCode: r.promoCode,
-          startDate: r.startsAt,
-          endDate: r.endsAt,
-          category: "all",
-          imageUrl: "/images/image-13.jpg",
-          active: r.active,
-          publishedAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
-          description: r.description,
-          perks: [
-            `${r.discountPercent}% rabatu na pobyt`,
-            "Darmowy parking i szybkie Wi-Fi",
-            "Kieliszek nalewki powitalnej"
-          ]
-        }));
-        return res.json(mapped);
-      }
-    } catch (dbErr) {
-      console.warn("DB admin campaigns query fallback:", dbErr);
-    }
-    res.json(promotionalCampaigns);
-  });
+  app.get("/api/admin/campaigns", asyncRoute(async (_req, res) => {
+    return res.json((await dbGetPromotions()).map(mapPromotion));
+  }));
 
   // Admin: Publish a new promotional campaign
-  app.post("/api/admin/campaigns", async (req, res) => {
+  app.post("/api/admin/campaigns", asyncRoute(async (req, res) => {
     const {
       title,
       subtitle,
@@ -1336,97 +1200,99 @@ async function startServer() {
       ]
     };
 
-    try {
-      await dbCreatePromotion({
-        id: newCampaign.id,
-        title: newCampaign.title,
-        badge: newCampaign.badge,
-        description: newCampaign.description,
-        discountPercent: newCampaign.discountPercentage,
-        promoCode: newCampaign.promoCode,
-        active: newCampaign.active,
-        channels: JSON.stringify(["website"]),
-        startsAt: newCampaign.startDate,
-        endsAt: newCampaign.endDate,
-      });
-    } catch (dbErr) {
-      console.warn("Failed persisting campaign to Cloud SQL:", dbErr);
-    }
-
-    promotionalCampaigns.unshift(newCampaign);
+    await dbCreatePromotion({
+      id: newCampaign.id,
+      title: newCampaign.title,
+      badge: newCampaign.badge,
+      description: newCampaign.description,
+      discountPercent: newCampaign.discountPercentage,
+      promoCode: newCampaign.promoCode,
+      active: newCampaign.active,
+      channels: JSON.stringify(["website"]),
+      startsAt: newCampaign.startDate,
+      endsAt: newCampaign.endDate,
+      metadata: {
+        subtitle: newCampaign.subtitle,
+        category: newCampaign.category,
+        imageUrl: newCampaign.imageUrl,
+        perks: newCampaign.perks,
+        publishedAt: newCampaign.publishedAt,
+      },
+    });
     res.status(201).json({ success: true, campaign: newCampaign });
-  });
+  }));
 
   // Admin: Toggle active status or edit campaign
-  app.put("/api/admin/campaigns/:id", async (req, res) => {
+  app.put("/api/admin/campaigns/:id", asyncRoute(async (req, res) => {
     const { id } = req.params;
-    const index = promotionalCampaigns.findIndex(c => c.id === id);
-    if (index === -1) {
+    const existing = (await dbGetPromotions()).find(campaign => campaign.id === id);
+    if (!existing) {
       return res.status(404).json({ error: "Kampania nie została znaleziona." });
     }
 
     const updated = {
-      ...promotionalCampaigns[index],
+      ...mapPromotion(existing),
       ...req.body,
       id // preserve ID
     };
 
-    try {
-      await dbUpdatePromotion(id, {
-        title: updated.title,
-        badge: updated.badge,
-        description: updated.description,
-        discountPercent: updated.discountPercentage,
-        promoCode: updated.promoCode,
-        active: updated.active,
-        startsAt: updated.startDate,
-        endsAt: updated.endDate,
-      });
-    } catch (dbErr) {
-      console.warn("Failed updating campaign in Cloud SQL:", dbErr);
-    }
-
-    promotionalCampaigns[index] = updated;
+    const saved = await dbUpdatePromotion(id, {
+      title: updated.title,
+      badge: updated.badge,
+      description: updated.description,
+      discountPercent: updated.discountPercentage,
+      promoCode: updated.promoCode,
+      active: updated.active,
+      startsAt: updated.startDate,
+      endsAt: updated.endDate,
+      metadata: {
+        subtitle: updated.subtitle,
+        category: updated.category,
+        imageUrl: updated.imageUrl,
+        perks: updated.perks,
+        publishedAt: updated.publishedAt,
+      },
+    });
+    if (!saved) return res.status(404).json({ error: "Kampania nie została znaleziona." });
     res.json({ success: true, campaign: updated });
-  });
+  }));
 
   // Admin: Delete promotional campaign
-  app.delete("/api/admin/campaigns/:id", async (req, res) => {
+  app.delete("/api/admin/campaigns/:id", asyncRoute(async (req, res) => {
     const { id } = req.params;
-    try {
-      await dbDeletePromotion(id);
-    } catch (dbErr) {
-      console.warn("Failed deleting campaign from Cloud SQL:", dbErr);
-    }
-    const initialLen = promotionalCampaigns.length;
-    promotionalCampaigns = promotionalCampaigns.filter(c => c.id !== id);
-    if (promotionalCampaigns.length === initialLen) {
+    if (!await dbDeletePromotion(id)) {
       return res.status(404).json({ error: "Kampania nie istnieje." });
     }
     res.json({ success: true, message: "Kampania została usunięta." });
-  });
+  }));
 
   // ==========================================
   // KODY RABATOWE (DISCOUNT CODES) API
   // ==========================================
 
   // Public: Get all active, valid promotional discount codes
-  app.get("/api/discounts", (_req, res) => {
-    const all = discountsManager.getAll();
+  app.get("/api/discounts", asyncRoute(async (_req, res) => {
+    if (!(await getSiteSettings()).features.promotions) {
+      return res.json([]);
+    }
+    const all = await discountsManager.getAll();
     const active = all.filter(c => discountsManager.isCodeCurrentlyValid(c).valid);
     res.json(active);
-  });
+  }));
 
   // Public/Guest: Validate discount code in real-time
-  app.post("/api/discounts/validate", (req, res) => {
+  app.post("/api/discounts/validate", asyncRoute(async (req, res) => {
+    if (!(await getSiteSettings()).features.promotions) {
+      return res.status(403).json({ valid: false, message: "Kody promocyjne są obecnie wyłączone." });
+    }
     const { code } = req.body;
-    const result = discountsManager.validateCode(code);
+    const result = await discountsManager.validateCode(code);
     res.json(result);
-  });
+  }));
 
   // Admin: Get all discount codes (active, expired, usage counters)
-  app.get("/api/admin/discounts", (_req, res) => {
-    const all = discountsManager.getAll();
+  app.get("/api/admin/discounts", asyncRoute(async (_req, res) => {
+    const all = await discountsManager.getAll();
     const mapped = all.map(codeObj => {
       const validity = discountsManager.isCodeCurrentlyValid(codeObj);
       return {
@@ -1436,129 +1302,95 @@ async function startServer() {
       };
     });
     res.json(mapped);
-  });
+  }));
 
   // Admin: Create new discount code
-  app.post("/api/admin/discounts", (req, res) => {
-    const result = discountsManager.create(req.body);
+  app.post("/api/admin/discounts", asyncRoute(async (req, res) => {
+    const result = await discountsManager.create(req.body);
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
     res.status(201).json({ success: true, code: result.code });
-  });
+  }));
 
   // Admin: Update discount code (active status, chat visibility, validity dates, limits)
-  app.put("/api/admin/discounts/:id", (req, res) => {
-    const result = discountsManager.update(req.params.id, req.body);
+  app.put("/api/admin/discounts/:id", asyncRoute(async (req, res) => {
+    const result = await discountsManager.update(req.params.id, req.body);
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
     res.json({ success: true, code: result.code });
-  });
+  }));
 
   // Admin: Delete discount code
-  app.delete("/api/admin/discounts/:id", (req, res) => {
-    const result = discountsManager.delete(req.params.id);
+  app.delete("/api/admin/discounts/:id", asyncRoute(async (req, res) => {
+    const result = await discountsManager.delete(req.params.id);
     if (!result.success) {
       return res.status(404).json({ error: result.error });
     }
     res.json({ success: true, message: "Kod rabatowy został pomyślnie usunięty." });
-  });
+  }));
 
   // Admin: Reset used counter for a discount code
-  app.post("/api/admin/discounts/:id/reset-counter", (req, res) => {
-    const result = discountsManager.resetCounter(req.params.id);
+  app.post("/api/admin/discounts/:id/reset-counter", asyncRoute(async (req, res) => {
+    const result = await discountsManager.resetCounter(req.params.id);
     if (!result.success) {
       return res.status(404).json({ error: result.error });
     }
     res.json({ success: true, code: result.code });
-  });
+  }));
 
   // Admin: List all reservations
-  app.get("/api/admin/reservations", async (_req, res) => {
-    try {
-      const rows = await dbGetReservations();
-      if (rows && rows.length > 0) {
-        const mapped: ReservationRecord[] = rows.map(r => ({
-          id: r.id,
-          createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
-          roomId: r.roomId,
-          guestName: r.guestName,
-          guestEmail: r.guestEmail,
-          guestPhone: r.guestPhone,
-          checkIn: r.checkIn,
-          checkOut: r.checkOut,
-          adults: r.adults,
-          children: r.children,
-          totalAmount: r.totalPrice,
-          paymentMethod: "transfer",
-          specialRequests: r.specialRequests || undefined,
-          status: (r.status === "confirmed" ? "Potwierdzona" : r.status === "cancelled" ? "Anulowana" : "Oczekuje na zaliczkę") as any,
-          source: (r.source === "booking.com" ? "booking_com" : "website") as any,
-        }));
-        return res.json(mapped);
-      }
-    } catch (dbErr) {
-      console.warn("DB reservations query fallback:", dbErr);
-    }
-    res.json(reservationsStore);
-  });
+  app.get("/api/admin/reservations", asyncRoute(async (_req, res) => {
+    return res.json((await dbGetReservations()).map(mapReservation));
+  }));
 
   // Admin: Update reservation status
-  app.put("/api/admin/reservations/:id/status", async (req, res) => {
+  app.put("/api/admin/reservations/:id/status", asyncRoute(async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
-    try {
-      const mappedDbStatus = status === "Potwierdzona" ? "confirmed" : status === "Anulowana" ? "cancelled" : "pending";
-      await dbUpdateReservationStatus(id, mappedDbStatus);
-    } catch (dbErr) {
-      console.warn("Failed updating reservation status in Cloud SQL:", dbErr);
+    if (!["Potwierdzona", "Anulowana", "Oczekuje na zaliczkę"].includes(status)) {
+      return res.status(400).json({ error: "Nieprawidłowy status rezerwacji." });
     }
-    const record = reservationsStore.find(r => r.id === id);
-    if (!record) {
+    const mappedDbStatus = status === "Potwierdzona" ? "confirmed" : status === "Anulowana" ? "cancelled" : "pending";
+    const row = await dbUpdateReservationStatus(id, mappedDbStatus);
+    if (!row) {
       return res.status(404).json({ error: "Rezerwacja nie została znaleziona." });
     }
-    record.status = status;
-    res.json({ success: true, reservation: record });
-  });
+    res.json({ success: true, reservation: mapReservation(row) });
+  }));
 
   // ==========================================
   // IMAGE UPLOAD API (CAMPAIGN & RESORT ASSETS)
   // ==========================================
-  app.post("/api/admin/upload-image", (req, res) => {
+  app.post("/api/admin/upload-image", asyncRoute(async (req, res) => {
     try {
       const { imageData, fileName = "campaign-upload.jpg" } = req.body;
       if (!imageData) {
         return res.status(400).json({ error: "Brak danych obrazu." });
       }
 
-      // If it's a data URL, decode and save to public/images and dist/images
       if (typeof imageData === "string" && imageData.startsWith("data:image/")) {
-        const matches = imageData.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
-        if (matches) {
-          const ext = matches[1] === "jpeg" ? "jpg" : matches[1];
-          const safeName = `upload-${Date.now()}-${Math.random().toString(36).substring(2, 6)}.${ext}`;
-          const buffer = Buffer.from(matches[2], "base64");
-          
-          const pubDir = path.join(process.cwd(), "public", "images");
-          const distDir = path.join(process.cwd(), "dist", "images");
-          if (!fs.existsSync(pubDir)) fs.mkdirSync(pubDir, { recursive: true });
-          if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
-
-          fs.writeFileSync(path.join(pubDir, safeName), buffer);
-          try {
-            fs.writeFileSync(path.join(distDir, safeName), buffer);
-          } catch (_) {}
-
-          return res.json({
-            success: true,
-            url: `/images/${safeName}`,
-            name: safeName
-          });
+        const matches = imageData.match(/^data:(image\/(?:avif|gif|jpeg|png|svg\+xml|webp));base64,([A-Za-z0-9+/=]+)$/i);
+        if (!matches) return res.status(400).json({ error: "Nieobsługiwany format obrazu." });
+        const contentType = matches[1].toLowerCase();
+        const extension = contentType === "image/jpeg" ? "jpg" : contentType.split("/")[1].replace("+xml", "");
+        const buffer = Buffer.from(matches[2], "base64");
+        if (buffer.length === 0 || buffer.length > 35 * 1024 * 1024) {
+          return res.status(413).json({ error: "Obraz jest pusty albo przekracza dozwolony rozmiar." });
         }
+        const safeName = `upload-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${extension}`;
+        await dbSaveMediaAsset({
+          name: safeName,
+          originalName: typeof fileName === "string" ? path.basename(fileName) : safeName,
+          contentType,
+          data: buffer,
+          size: buffer.length,
+          uploaded: true,
+        });
+        return res.json({ success: true, url: `/images/${safeName}`, name: safeName });
       }
 
-      // Or if it's already an existing /images/ URL or external URL
       if (typeof imageData === "string" && (imageData.startsWith("http") || imageData.startsWith("/"))) {
         return res.json({
           success: true,
@@ -1568,39 +1400,97 @@ async function startServer() {
 
       return res.status(400).json({ error: "Nieobsługiwany format obrazu." });
     } catch (err: any) {
-      console.error("Upload error:", err);
-      res.status(500).json({ error: err.message || "Błąd zapisu pliku obrazu." });
+      logger.error("Image upload database write failed", { error: err });
+      res.status(503).json({ error: "Nie udało się zapisać obrazu w bazie danych." });
     }
-  });
+  }));
+
+  app.get("/api/admin/media", asyncRoute(async (_req, res) => {
+    try {
+      const images = (await dbGetMediaAssets()).map(asset => ({
+        name: asset.name,
+        url: `/images/${asset.name}`,
+        contentType: asset.contentType,
+        size: asset.size,
+        uploaded: asset.uploaded,
+      }));
+      res.json(images);
+    } catch (error) {
+      logger.error("Failed to list CMS media assets", { error });
+      res.status(500).json({ error: "MEDIA_LIST_FAILED" });
+    }
+  }));
+
+  app.get("/images/:name", asyncRoute(async (req, res) => {
+    try {
+      const asset = await dbGetMediaAsset(req.params.name);
+      if (!asset) return res.status(404).end();
+      res.setHeader("Content-Type", asset.contentType);
+      res.setHeader("Content-Length", asset.size);
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      return res.send(asset.data);
+    } catch (error) {
+      logger.error("Media database read failed", { error, name: req.params.name });
+      return res.status(503).json({ error: "Nie udało się pobrać obrazu z bazy danych." });
+    }
+  }));
+
+  app.delete("/api/admin/media/:name", asyncRoute(async (req, res) => {
+    const { name } = req.params;
+    if (
+      path.basename(name) !== name
+      || !/^[a-z0-9._-]+\.(avif|gif|jpe?g|png|svg|webp)$/i.test(name)
+    ) {
+      return res.status(400).json({ error: "MEDIA_FILE_NOT_MANAGED" });
+    }
+
+    try {
+      const imageUrl = `/images/${name}`;
+      if (await hasCmsImageReference(imageUrl)) {
+        return res.status(409).json({ error: "MEDIA_FILE_IN_USE" });
+      }
+
+      const [rooms, campaigns, asset] = await Promise.all([
+        dbGetRooms(),
+        dbGetPromotions(),
+        dbGetMediaAsset(name),
+      ]);
+      if (!asset) return res.status(404).json({ error: "MEDIA_FILE_NOT_FOUND" });
+      if (!asset.uploaded) return res.status(403).json({ error: "BUNDLED_MEDIA_CANNOT_BE_DELETED" });
+      if (rooms.some(room => room.images.includes(imageUrl))
+        || campaigns.some(campaign => JSON.stringify(campaign.metadata).includes(imageUrl))) {
+        return res.status(409).json({ error: "MEDIA_FILE_IN_USE" });
+      }
+
+      if (!await dbDeleteMediaAsset(name)) return res.status(404).json({ error: "MEDIA_FILE_NOT_FOUND" });
+      return res.json({ success: true });
+    } catch (error) {
+      logger.error("Failed to delete CMS media asset", { error, name });
+      return res.status(500).json({ error: "MEDIA_DELETE_FAILED" });
+    }
+  }));
 
   // ==========================================
   // AI KNOWLEDGE BASE & DOCUMENT TRAINING APIS
   // ==========================================
   // List all AI Knowledge documents
-  app.get("/api/admin/knowledge-base", async (_req, res) => {
-    try {
-      const rows = await dbGetAiKnowledge();
-      if (rows && rows.length > 0) {
-        const mapped: AiKnowledgeDoc[] = rows.map(r => ({
-          id: r.id,
-          title: r.title,
-          category: (r.category as any) || "hotel",
-          content: r.content,
-          fileName: `${r.title.toLowerCase().replace(/[^a-z0-9]/g, "_").substring(0, 30)}.txt`,
-          fileSize: `${Math.max(0.5, Math.round(r.content.length / 1024 * 10) / 10)} KB`,
-          createdAt: r.updatedAt ? r.updatedAt.toISOString() : new Date().toISOString(),
-          active: true
-        }));
-        return res.json(mapped);
-      }
-    } catch (dbErr) {
-      console.warn("DB AI knowledge query fallback:", dbErr);
-    }
-    res.json(aiKnowledgeStore);
-  });
+  app.get("/api/admin/knowledge-base", asyncRoute(async (_req, res) => {
+    const rows = await dbGetAiKnowledge();
+    return res.json(rows.map(r => ({
+      id: r.id,
+      title: r.title,
+      category: r.category as AiKnowledgeDoc['category'],
+      content: r.content,
+      fileName: r.fileName || `${r.title.toLowerCase().replace(/[^a-z0-9]/g, "_").substring(0, 30)}.txt`,
+      fileSize: `${Math.max(0.5, Math.round(r.content.length / 1024 * 10) / 10)} KB`,
+      createdAt: r.updatedAt?.toISOString() || '',
+      active: r.active
+    } satisfies AiKnowledgeDoc)));
+  }));
 
   // Add new document / training text to AI Knowledge Base
-  app.post("/api/admin/knowledge-base", async (req, res) => {
+  app.post("/api/admin/knowledge-base", asyncRoute(async (req, res) => {
     const { title, category = "hotel", content, fileName = "" } = req.body;
     if (!title || !content) {
       return res.status(400).json({ error: "Tytuł i treść dokumentu są wymagane." });
@@ -1617,51 +1507,39 @@ async function startServer() {
       active: true
     };
 
-    try {
-      await dbUpsertAiKnowledge({
-        id: newDoc.id,
-        category: newDoc.category,
-        title: newDoc.title,
-        content: newDoc.content,
-      });
-    } catch (dbErr) {
-      console.warn("Failed persisting AI knowledge doc to Cloud SQL:", dbErr);
-    }
-
-    aiKnowledgeStore.unshift(newDoc);
+    await dbUpsertAiKnowledge({
+      id: newDoc.id,
+      category: newDoc.category,
+      title: newDoc.title,
+      content: newDoc.content,
+      fileName: newDoc.fileName,
+      active: newDoc.active,
+    });
     res.status(201).json({
       success: true,
       doc: newDoc,
-      totalActiveDocs: aiKnowledgeStore.filter(d => d.active).length
+      totalActiveDocs: (await dbGetAiKnowledge()).filter(doc => doc.active).length
     });
-  });
+  }));
 
   // Toggle active state of a document
-  app.put("/api/admin/knowledge-base/:id/toggle", (req, res) => {
+  app.put("/api/admin/knowledge-base/:id/toggle", asyncRoute(async (req, res) => {
     const { id } = req.params;
-    const doc = aiKnowledgeStore.find(d => d.id === id);
-    if (!doc) {
-      return res.status(404).json({ error: "Dokument nie istnieje." });
-    }
-    doc.active = !doc.active;
+    const existing = (await dbGetAiKnowledge()).find(doc => doc.id === id);
+    if (!existing) return res.status(404).json({ error: "Dokument nie istnieje." });
+    const doc = await dbUpdateAiKnowledge(id, { active: !existing.active });
+    if (!doc) return res.status(404).json({ error: "Dokument nie istnieje." });
     res.json({ success: true, doc, active: doc.active });
-  });
+  }));
 
   // Delete document from AI Knowledge Base
-  app.delete("/api/admin/knowledge-base/:id", async (req, res) => {
+  app.delete("/api/admin/knowledge-base/:id", asyncRoute(async (req, res) => {
     const { id } = req.params;
-    try {
-      await dbDeleteAiKnowledge(id);
-    } catch (dbErr) {
-      console.warn("Failed deleting AI knowledge doc from Cloud SQL:", dbErr);
-    }
-    const initialLen = aiKnowledgeStore.length;
-    aiKnowledgeStore = aiKnowledgeStore.filter(d => d.id !== id);
-    if (aiKnowledgeStore.length === initialLen) {
+    if (!await dbDeleteAiKnowledge(id)) {
       return res.status(404).json({ error: "Dokument nie został znaleziony." });
     }
     res.json({ success: true, message: "Dokument został usunięty z bazy wiedzy AI." });
-  });
+  }));
 
   // ==========================================
   // ROOMS & CENTRAL AVAILABILITY APIS
@@ -1681,6 +1559,7 @@ async function startServer() {
   app.get("/api/admin/guests/:email/messages", handleGetGuestMessages);
   app.post("/api/admin/guests/:email/messages", handleSendGuestMessage);
   app.get("/api/guest/messages", handleGetMyGuestMessages);
+  app.post("/api/contact/inquiries", contactInquiryRateLimiter, handleSubmitContactInquiry);
 
   // ==========================================
   // ADMIN LIVE CHAT OVERRIDE & TRANSLATION APIS
@@ -1698,11 +1577,25 @@ async function startServer() {
   app.get("/api/cms/content", handleGetCmsContent);
   app.put("/api/admin/cms/content", handleUpdateCmsContent);
   app.post("/api/admin/cms/reset", handleResetCmsContent);
+  app.get("/api/site-settings", asyncRoute(async (_req, res) => {
+    res.json(await getSiteSettings());
+  }));
+  app.put("/api/admin/site-settings", asyncRoute(async (req, res) => {
+    try {
+      res.json({ success: true, settings: await updateSiteSettings(req.body) });
+    } catch (error) {
+      if (error instanceof SiteSettingsValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      console.error("Site settings update failed:", error);
+      return res.status(500).json({ error: "Could not save site settings." });
+    }
+  }));
 
   // ==========================================
   // AI CHAT CONCIERGE & MULTILINGUAL TRANSLATION API
   // ==========================================
-  app.post("/api/chat", chatRateLimiter, async (req, res) => {
+  app.post("/api/chat", chatRateLimiter, asyncRoute(async (req, res) => {
     const {
       message,
       conversationHistory = [],
@@ -1736,21 +1629,49 @@ async function startServer() {
       sk: "Slovak"
     } as Record<ChatLanguage, string>)[detectedLang];
 
-    const sessionId = clientSessionId || "guest-session-live";
-    let session = liveChatSessions.get(sessionId);
-    if (!session) {
-      session = {
+    const sessionId = typeof clientSessionId === 'string' && clientSessionId ? clientSessionId : randomUUID();
+    const storedSession = await dbGetChatSession(sessionId);
+    const session = storedSession ? {
+      sessionId: storedSession.sessionId,
+      guestName: storedSession.guestName,
+      guestEmail: storedSession.guestEmail || undefined,
+      language: storedSession.language as ChatLanguage,
+      isAiPaused: storedSession.isAiPaused,
+      adminTakeover: storedSession.adminTakeover,
+      lastMessage: storedSession.lastMessage || '',
+      lastMessageAt: storedSession.lastMessageAt?.toISOString() || '',
+      messages: JSON.parse(storedSession.messagesJson) as Array<{
+        id: string;
+        role: 'user' | 'model' | 'admin';
+        content: string;
+        translationPl?: string;
+        timestamp: string;
+      }>
+    } : {
+      sessionId,
+      guestName,
+      guestEmail: guestEmail || undefined,
+      language: detectedLang,
+      isAiPaused: false,
+      adminTakeover: false,
+      lastMessage: '',
+      lastMessageAt: new Date().toISOString(),
+      messages: [] as Array<{
+        id: string;
+        role: 'user' | 'model' | 'admin';
+        content: string;
+        translationPl?: string;
+        timestamp: string;
+      }>
+    };
+    if (!storedSession) {
+      await dbUpsertChatSession({
         sessionId,
         guestName,
-        guestEmail: guestEmail || undefined,
-        language: "pl",
-        isAiPaused: false,
-        adminTakeover: false,
-        lastMessage: message,
-        lastMessageAt: new Date().toISOString(),
-        messages: []
-      };
-      liveChatSessions.set(sessionId, session);
+        guestEmail,
+        language: detectedLang,
+        messagesJson: '[]'
+      });
     }
 
     // Check if human receptionist has taken over or paused AI for this session
@@ -1773,18 +1694,16 @@ async function startServer() {
       session.lastMessage = message;
       session.lastMessageAt = new Date().toISOString();
 
-      try {
-        await dbUpsertChatSession({
-          sessionId: session.sessionId,
-          guestName: session.guestName,
-          guestEmail: session.guestEmail,
-          language: session.language,
-          isAiPaused: session.isAiPaused,
-          adminTakeover: session.adminTakeover,
-          lastMessage: session.lastMessage,
-          messagesJson: JSON.stringify(session.messages)
-        });
-      } catch (_) {}
+      await dbUpsertChatSession({
+        sessionId: session.sessionId,
+        guestName: session.guestName,
+        guestEmail: session.guestEmail,
+        language: session.language,
+        isAiPaused: session.isAiPaused,
+        adminTakeover: session.adminTakeover,
+        lastMessage: session.lastMessage,
+        messagesJson: JSON.stringify(session.messages)
+      });
 
       const noticeReply = session.language === 'en'
         ? "You are connected with the Watra Korbielów front desk. A staff member is answering you directly."
@@ -1803,13 +1722,13 @@ async function startServer() {
     }
 
     // Compile dynamic knowledge base from all active documents fed by admin
-    const activeDocs = aiKnowledgeStore.filter(d => d.active);
+    const activeDocs = (await dbGetAiKnowledge()).filter(doc => doc.active);
     const dynamicKnowledgeBaseText = activeDocs
       .map((doc, idx) => `### [DOKUMENT ${idx + 1}: ${doc.title.toUpperCase()} (Kategoria: ${doc.category.toUpperCase()})]\n${doc.content}`)
       .join("\n\n");
 
     // Active Admin-Managed Discount Codes authorized for Concierge AI
-    const activeChatDiscounts = discountsManager.getChatDiscounts();
+    const activeChatDiscounts = await discountsManager.getChatDiscounts();
     const chatDiscountsText = activeChatDiscounts.length > 0
       ? activeChatDiscounts.map(d => {
           let validity = "";
@@ -1895,18 +1814,16 @@ Style Guidelines:
       session.lastMessage = finalReply;
       session.lastMessageAt = new Date().toISOString();
 
-      try {
-        dbUpsertChatSession({
-          sessionId: session.sessionId,
-          guestName: session.guestName,
-          guestEmail: session.guestEmail,
-          language: session.language,
-          isAiPaused: session.isAiPaused,
-          adminTakeover: session.adminTakeover,
-          lastMessage: session.lastMessage,
-          messagesJson: JSON.stringify(session.messages)
-        });
-      } catch (_) {}
+      await dbUpsertChatSession({
+        sessionId: session.sessionId,
+        guestName: session.guestName,
+        guestEmail: session.guestEmail,
+        language: session.language,
+        isAiPaused: session.isAiPaused,
+        adminTakeover: session.adminTakeover,
+        lastMessage: session.lastMessage,
+        messagesJson: JSON.stringify(session.messages)
+      });
 
       return res.json({
         reply: finalReply,
@@ -2018,7 +1935,7 @@ Style Guidelines:
     }
 
     return await recordAndSendAiReply(reply, "local-concierge-engine", detectedLang);
-  });
+  }));
 
   // 404 handler for API endpoints - ensures API callers receive JSON instead of index.html
   app.all("/api/*", (_req, res) => {
@@ -2080,4 +1997,7 @@ Style Guidelines:
   });
 }
 
-startServer();
+startServer().catch((error) => {
+  logger.error("Application startup failed because persistent services are unavailable", { error });
+  process.exitCode = 1;
+});

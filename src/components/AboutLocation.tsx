@@ -1,7 +1,8 @@
+import { CmsManagedImage } from './CmsManagedImage';
+import { useCmsTranslations } from '../context/CmsContext';
 import React from 'react';
 import { MapPin, Mountain, Compass, Award, ExternalLink, Navigation } from 'lucide-react';
 import { Language } from '../types';
-import { translations } from '../translations';
 import { RESORT_STATS } from '../data/resortData';
 
 interface AboutLocationProps {
@@ -9,7 +10,7 @@ interface AboutLocationProps {
 }
 
 export const AboutLocation: React.FC<AboutLocationProps> = ({ lang }) => {
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   const distances = [
     { distance: "100 m", title: t.about.prox1, tag: "Stok & Wyciąg" },
@@ -76,7 +77,7 @@ export const AboutLocation: React.FC<AboutLocationProps> = ({ lang }) => {
           {/* Right Column: Visual Composite & Interactive Map Card */}
           <div className="lg:col-span-5 space-y-4">
             <div className="relative rounded-2xl overflow-hidden shadow-xl border-4 border-white">
-              <img
+              <CmsManagedImage
                 src="/images/image-70.jpg"
                 alt="Watra Korbielów widok z zewnątrz"
                 className="w-full h-80 object-cover hover:scale-105 transition-transform duration-500"
@@ -95,7 +96,7 @@ export const AboutLocation: React.FC<AboutLocationProps> = ({ lang }) => {
             {/* Secondary Photo and Map preview */}
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-xl overflow-hidden shadow-md h-36 border-2 border-white">
-                <img
+                <CmsManagedImage
                   src="/images/about.jpg"
                   alt="Masyw Pilska i szlaki"
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"

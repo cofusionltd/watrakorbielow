@@ -1,7 +1,8 @@
+import { CmsManagedImage } from './CmsManagedImage';
+import { useCmsTranslations } from '../context/CmsContext';
 import React from 'react';
 import { Gift, Check, Clock, ChevronRight, Sparkles } from 'lucide-react';
 import { Language, PackageOffer } from '../types';
-import { translations } from '../translations';
 import { PACKAGE_OFFERS } from '../data/resortData';
 
 interface PackagesSectionProps {
@@ -10,7 +11,7 @@ interface PackagesSectionProps {
 }
 
 export const PackagesSection: React.FC<PackagesSectionProps> = ({ lang, onSelectPackage }) => {
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   return (
     <section id="pakiety" className="py-20 bg-white text-[#222222]">
@@ -36,7 +37,7 @@ export const PackagesSection: React.FC<PackagesSectionProps> = ({ lang, onSelect
             >
               <div>
                 <div className="relative h-48 overflow-hidden">
-                  <img
+                  <CmsManagedImage
                     src={pkg.image}
                     alt={pkg.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

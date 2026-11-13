@@ -1,7 +1,7 @@
+import { useCmsTranslations } from '../context/CmsContext';
 import React, { useState } from 'react';
 import { Calendar as CalendarIcon, Users, BedDouble, Search, Sparkles, ShieldCheck, ExternalLink, CalendarDays } from 'lucide-react';
 import { Language, BookingSearchQuery } from '../types';
-import { translations } from '../translations';
 import { TranslatedDatePicker } from './TranslatedDatePicker';
 
 interface BookingBarProps {
@@ -11,7 +11,7 @@ interface BookingBarProps {
 }
 
 export const BookingBar: React.FC<BookingBarProps> = ({ lang, onSearch, onOpenAvailabilityModal }) => {
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const defaultCheckout = new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0];

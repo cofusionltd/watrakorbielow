@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { validateEnvironment } from './env.ts';
 
 const config = validateEnvironment();
+const TOKEN_VALIDITY_MS = 7 * 24 * 60 * 60 * 1000;
 const VALID_PASSCODES = new Set<string>();
 
 if (config.ADMIN_API_SECRET) {
@@ -14,22 +15,38 @@ if (process.env.NODE_ENV !== 'production') {
   VALID_PASSCODES.add('admin');
 }
 
-// In-memory set of active admin tokens
-// Tokens are valid cryptographically signed tokens
-const activeAdminTokens = new Set<string>();
+function signTimestamp(timestamp: number): string {
+  return crypto
+    .createHmac('sha256', config.ADMIN_API_SECRET)
+    .update(String(timestamp))
+    .digest('hex')
+    .substring(0, 32);
+}
 
 export function generateAdminToken(): string {
-  const token = 'watra_adm_' + crypto.randomBytes(32).toString('hex');
-  activeAdminTokens.add(token);
-  return token;
+  const timestamp = Date.now();
+  return `watra_adm_${timestamp}_${signTimestamp(timestamp)}`;
 }
 
 export function isValidAdminToken(token: string): boolean {
-  if (!token) return false;
-  if (activeAdminTokens.has(token)) return true;
+  if (!token || typeof token !== 'string') return false;
+
+  const cleanToken = token.trim();
   // Also allow direct secret key as bearer token (e.g. for CI/CD or automation)
-  if (VALID_PASSCODES.has(token)) return true;
-  return false;
+  if (VALID_PASSCODES.has(cleanToken)) return true;
+
+  const match = /^watra_adm_(\d+)_(\w{32})$/.exec(cleanToken);
+  if (!match) return false;
+
+  const timestamp = Number(match[1]);
+  const now = Date.now();
+  if (!Number.isSafeInteger(timestamp) || timestamp > now || now - timestamp > TOKEN_VALIDITY_MS) {
+    return false;
+  }
+
+  const providedSignature = Buffer.from(match[2], 'utf8');
+  const expectedSignature = Buffer.from(signTimestamp(timestamp), 'utf8');
+  return crypto.timingSafeEqual(providedSignature, expectedSignature);
 }
 
 export function handleAdminLogin(req: Request, res: Response) {

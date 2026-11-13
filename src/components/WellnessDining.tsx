@@ -1,7 +1,8 @@
+import { CmsManagedImage } from './CmsManagedImage';
+import { useCmsTranslations } from '../context/CmsContext';
 import React from 'react';
 import { Waves, UtensilsCrossed, Flame, Sparkles, HeartPulse, Check, Calendar } from 'lucide-react';
 import { Language } from '../types';
-import { translations } from '../translations';
 
 interface WellnessDiningProps {
   lang: Language;
@@ -9,7 +10,7 @@ interface WellnessDiningProps {
 }
 
 export const WellnessDining: React.FC<WellnessDiningProps> = ({ lang, onOpenBooking }) => {
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   return (
     <section id="wellness" className="py-20 bg-[#F9F8F6] text-[#222222]">
@@ -61,21 +62,21 @@ export const WellnessDining: React.FC<WellnessDiningProps> = ({ lang, onOpenBook
 
           <div className="lg:col-span-6 grid grid-cols-2 gap-4">
             <div className="col-span-2 rounded-2xl overflow-hidden shadow-xl border-4 border-white h-72">
-              <img
+              <CmsManagedImage
                 src="/images/jacuzi.jpg"
                 alt="Zewnętrzne jacuzzi Watra Korbielów"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
               />
             </div>
             <div className="rounded-xl overflow-hidden shadow-md h-40 border-2 border-white">
-              <img
+              <CmsManagedImage
                 src="/images/image-63.jpg"
                 alt="Tradycyjna sucha sauna fińska"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               />
             </div>
             <div className="rounded-xl overflow-hidden shadow-md h-40 border-2 border-white">
-              <img
+              <CmsManagedImage
                 src="/images/bilard-1.jpg"
                 alt="Sala bilardowa w Watra Korbielów"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
@@ -89,21 +90,21 @@ export const WellnessDining: React.FC<WellnessDiningProps> = ({ lang, onOpenBook
           {/* Images on the left */}
           <div className="lg:col-span-6 order-2 lg:order-1 grid grid-cols-2 gap-4">
             <div className="rounded-xl overflow-hidden shadow-md h-48 border-2 border-white">
-              <img
+              <CmsManagedImage
                 src="/images/image-30.jpg"
                 alt="Wnętrze restauracji Watra"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               />
             </div>
             <div className="rounded-xl overflow-hidden shadow-md h-48 border-2 border-white">
-              <img
+              <CmsManagedImage
                 src="/images/image-31.jpg"
                 alt="Regionalne dania i bar"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               />
             </div>
             <div className="col-span-2 rounded-2xl overflow-hidden shadow-xl border-4 border-white h-64">
-              <img
+              <CmsManagedImage
                 src="/images/image-32.jpg"
                 alt="Wiata grillowa i biesiadna"
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"

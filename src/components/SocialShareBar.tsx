@@ -1,7 +1,7 @@
+import { useCmsTranslations } from '../context/CmsContext';
 import React, { useState } from 'react';
 import { Share2, Copy, Check, MessageCircle, Send } from 'lucide-react';
 import { PromotionalCampaign, Language } from '../types';
-import { translations } from '../translations';
 
 interface SocialShareBarProps {
   campaign: PromotionalCampaign;
@@ -18,7 +18,7 @@ export const SocialShareBar: React.FC<SocialShareBarProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   const shareTitle = `Watra Korbielów – ${campaign.title} (-${campaign.discountPercentage}%)`;
   const shareText = t.socialShare.shareText(campaign.title, campaign.discountPercentage, campaign.promoCode);

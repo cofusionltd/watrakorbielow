@@ -1,3 +1,4 @@
+import { useCmsTranslations } from '../context/CmsContext';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   MapPin,
@@ -20,7 +21,6 @@ import {
   Eye
 } from 'lucide-react';
 import { TripDetails, AddressSuggestion, Language } from '../types';
-import { translations } from '../translations';
 
 interface GoogleMapsTripPlannerProps {
   lang?: Language;
@@ -45,7 +45,7 @@ const POPULAR_ORIGINS = [
 
 export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ lang = 'pl' }) => {
   const inputContainerRef = useRef<HTMLDivElement>(null);
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   const [mapType, setMapType] = useState<'roadmap' | 'satellite'>('roadmap');
   const [originInput, setOriginInput] = useState('');
@@ -76,7 +76,7 @@ export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ la
   // Debounced address search autocomplete
   useEffect(() => {
     const trimmed = originInput.trim();
-    if (!trimmed || trimmed.length < 2 || trimmed.startsWith('Moja lokalizacja (')) {
+    if (!trimmed || trimmed.length < 2 || trimmed.startsWith(`${t.tripPlanner.myLocation} (`)) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -102,13 +102,13 @@ export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ la
     }, 220);
 
     return () => clearTimeout(timer);
-  }, [originInput]);
+  }, [originInput, t.tripPlanner.myLocation]);
 
   // Calculate route with our multi-tier geocoder & directions engine
   const handleCalculateRoute = async (targetOrigin?: string, coords?: [number, number]) => {
     const query = (targetOrigin !== undefined ? targetOrigin : originInput).trim();
     if (!query && !coords) {
-      setError('Wpisz dowolne miasto, wieś lub dokładny adres (np. Katowice, Kraków, Soblówka 50, Podleśna 24 Krzeszowice).');
+      setError(t.tripPlanner.inputEmptyError);
       return;
     }
 
@@ -117,7 +117,7 @@ export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ la
     setShowSuggestions(false);
 
     try {
-      let url = `/api/directions?origin=${encodeURIComponent(query || 'Lokalizacja początkowa')}`;
+      let url = `/api/directions?origin=${encodeURIComponent(query || t.tripPlanner.myLocation)}`;
       if (coords && coords.length === 2) {
         url += `&lat=${coords[0]}&lon=${coords[1]}`;
       }
@@ -126,14 +126,15 @@ export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ la
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Nie udało się obliczyć trasy.');
+        throw new Error(t.tripPlanner.calculateError);
       }
 
       setTripDetails(data);
       setActiveRouteOrigin(query);
       setShowSteps(false);
-    } catch (err: any) {
-      setError(err.message || 'Wystąpił błąd podczas wyszukiwania trasy.');
+    } catch (err) {
+      console.error('Route calculation failed:', err);
+      setError(t.tripPlanner.calculateError);
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +154,7 @@ export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ la
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setError('Twoja przeglądarka nie obsługuje geolokalizacji GPS.');
+      setError(t.tripPlanner.geoNotSupported);
       return;
     }
 
@@ -165,14 +166,21 @@ export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ la
         setIsLocatingUser(false);
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
-        const label = `Moja lokalizacja (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+        const label = `${t.tripPlanner.myLocation} (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
         setOriginInput(label);
         setShowSuggestions(false);
         handleCalculateRoute(label, [lat, lon]);
       },
-      () => {
+      (error) => {
         setIsLocatingUser(false);
-        setError('Nie udało się pobrać pozycji GPS. Wpisz nazwę swojej miejscowości ręcznie.');
+        const message = error.code === error.PERMISSION_DENIED
+          ? t.tripPlanner.geoPermissionDenied
+          : error.code === error.TIMEOUT
+            ? t.tripPlanner.geoTimeout
+            : error.code === error.POSITION_UNAVAILABLE
+              ? t.tripPlanner.geoUnavailable
+              : t.tripPlanner.geoGenericError;
+        setError(message);
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
@@ -213,7 +221,7 @@ export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ la
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="inline-flex items-center space-x-2 bg-[#D4A373]/20 text-[#D4A373] px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             <Compass className="w-3.5 h-3.5" />
-            <span>Google Maps • Precyzyjny Planer Dojazdu</span>
+            <span>{t.tripPlanner.tag}</span>
           </div>
 
           {/* Map Layer Switcher */}
@@ -301,7 +309,7 @@ export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ la
                       setShowSuggestions(false);
                     }}
                     className="p-1 text-neutral-400 hover:text-neutral-700 rounded-full hover:bg-neutral-100 transition-colors cursor-pointer"
-                    title="Wyczyść"
+                    title={t.tripPlanner.clear}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -418,7 +426,7 @@ export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ la
       {/* Embedded Google Maps Container */}
       <div className="relative w-full h-[400px] sm:h-[480px] bg-neutral-100">
         <iframe
-          title="Google Maps Watra Korbielów"
+          title={t.tripPlanner.mapTitle}
           src={getGoogleMapsEmbedUrl()}
           className="w-full h-full border-0"
           loading="lazy"
@@ -431,20 +439,22 @@ export const GoogleMapsTripPlanner: React.FC<GoogleMapsTripPlannerProps> = ({ la
           <span className="w-2 h-2 rounded-full bg-emerald-500" />
           <span className="font-semibold text-[#1E3A2B]">Google Maps</span>
           <span className="text-neutral-400">•</span>
-          <span className="text-neutral-500">{activeRouteOrigin ? `Trasa: ${activeRouteOrigin}` : 'Watra Korbielów'}</span>
+          <span className="text-neutral-500">
+            {activeRouteOrigin ? `${t.tripPlanner.statusRoute} ${activeRouteOrigin}` : t.tripPlanner.statusDefault}
+          </span>
         </div>
 
         {/* Live Location Badge */}
         <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl border border-neutral-200 shadow-lg text-xs max-w-xs">
           <div className="flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-bold text-[#1E3A2B]">Watra Korbielów Resort</span>
+            <span className="font-bold text-[#1E3A2B]">{t.tripPlanner.resortName}</span>
           </div>
           <p className="text-[11px] text-neutral-600 mt-1">
-            {HOTEL_ADDRESS}
+            {t.contactPage.address}
           </p>
           <div className="text-[10px] text-neutral-400 mt-0.5">
-            100 m do stoku Cypisek • 1557 m n.p.m. Pilsko
+            {t.tripPlanner.nearbyLandmarks}
           </div>
         </div>
       </div>

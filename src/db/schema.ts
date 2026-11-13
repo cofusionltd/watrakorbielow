@@ -1,4 +1,8 @@
-import { boolean, integer, pgTable, serial, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { boolean, customType, integer, jsonb, pgTable, serial, text, timestamp, index } from 'drizzle-orm/pg-core';
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => 'bytea',
+});
 
 // Users table (synced with Firebase Auth)
 export const users = pgTable('users', {
@@ -51,6 +55,9 @@ export const reservations = pgTable('reservations', {
   promoCode: text('promo_code'),
   includeBreakfast: boolean('include_breakfast').notNull().default(false),
   includeDinner: boolean('include_dinner').notNull().default(false),
+  paymentMethod: text('payment_method').notNull().default('transfer'),
+  addons: jsonb('addons').notNull().default([]),
+  bookingComRef: text('booking_com_ref'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => ({
   availabilityIdx: index('idx_reservations_availability').on(table.roomId, table.checkIn, table.checkOut, table.status),
@@ -67,6 +74,8 @@ export const guestProfiles = pgTable('guest_profiles', {
   loyaltyTier: text('loyalty_tier').notNull().default('bronze'), // 'bronze' | 'silver' | 'gold' | 'vip'
   notes: text('notes'),
   totalVisits: integer('total_visits').notNull().default(1),
+  totalSpend: integer('total_spend').notNull().default(0),
+  lastVisit: text('last_visit'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -117,7 +126,49 @@ export const promotions = pgTable('promotions', {
   clicksCount: integer('clicks_count').notNull().default(0),
   bookingsCount: integer('bookings_count').notNull().default(0),
   revenueGenerated: integer('revenue_generated').notNull().default(0),
+  metadata: jsonb('metadata').notNull().default({}),
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const discountCodes = pgTable('discount_codes', {
+  id: text('id').primaryKey(),
+  code: text('code').notNull().unique(),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  discountPercentage: integer('discount_percentage').notNull(),
+  active: boolean('active').notNull().default(true),
+  terminationType: text('termination_type').notNull().default('time'),
+  startDate: text('start_date'),
+  endDate: text('end_date'),
+  usageLimit: integer('usage_limit'),
+  usedCount: integer('used_count').notNull().default(0),
+  availableInChat: boolean('available_in_chat').notNull().default(true),
+  chatTriggerNote: text('chat_trigger_note').notNull().default(''),
+  minBookingNights: integer('min_booking_nights'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const cmsContent = pgTable('cms_content', {
+  id: text('id').primaryKey(),
+  content: jsonb('content').notNull(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const siteSettings = pgTable('site_settings', {
+  id: text('id').primaryKey(),
+  settings: jsonb('settings').notNull(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const mediaAssets = pgTable('media_assets', {
+  name: text('name').primaryKey(),
+  originalName: text('original_name').notNull(),
+  contentType: text('content_type').notNull(),
+  data: bytea('data').notNull(),
+  size: integer('size').notNull(),
+  uploaded: boolean('uploaded').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 // AI Knowledge Base Documents
@@ -126,6 +177,8 @@ export const aiKnowledge = pgTable('ai_knowledge', {
   title: text('title').notNull(),
   category: text('category').notNull(),
   content: text('content').notNull(),
+  fileName: text('file_name'),
+  active: boolean('active').notNull().default(true),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { useCms } from '../../context/CmsContext';
+import React, { useMemo, useRef, useState } from 'react';
+import { collectTranslatableStrings, useCms } from '../../context/CmsContext';
 import { SiteCmsContent, MenuItem, DistanceItem, TreatmentItem } from '../../types';
 import { adminFetch } from '../../lib/adminApi';
 import { Language } from '../../types';
 import { adminText } from '../../adminTranslations';
+import { translations } from '../../translations';
 import { 
   Building2, 
   Sparkles, 
@@ -19,23 +20,92 @@ import {
   Check, 
   Upload, 
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  Image as ImageIcon,
+  ImageOff,
+  Languages,
+  Search,
+  Pencil
 } from 'lucide-react';
+import { CMS_IMAGE_REMOVED } from '../../context/CmsContext';
+
+interface CmsMediaAsset {
+  name: string;
+  url: string;
+}
+
+const containsMediaUrl = (value: unknown, url: string): boolean => {
+  if (value === url) return true;
+  if (Array.isArray(value)) return value.some(item => containsMediaUrl(item, url));
+  if (value && typeof value === 'object') {
+    return Object.entries(value).some(([key, nestedValue]) => key === url || containsMediaUrl(nestedValue, url));
+  }
+  return false;
+};
 
 export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
   const { content, updateCmsContent, resetToDefaults } = useCms();
-  const [activeTab, setActiveTab] = useState<'resort' | 'hero' | 'about' | 'restaurant' | 'wellness' | 'contact'>('resort');
+  const [activeTab, setActiveTab] = useState<'resort' | 'hero' | 'about' | 'restaurant' | 'wellness' | 'contact' | 'translations' | 'media'>('resort');
+  const [translationLanguage, setTranslationLanguage] = useState<Language>(lang);
+  const [translationSection, setTranslationSection] = useState('all');
+  const [translationSearch, setTranslationSearch] = useState('');
+  const [mediaAssets, setMediaAssets] = useState<CmsMediaAsset[]>([]);
+  const [selectedImageSource, setSelectedImageSource] = useState('');
+  const [replacementImage, setReplacementImage] = useState('');
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [mediaNotice, setMediaNotice] = useState<string | null>(null);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [deletingImage, setDeletingImage] = useState<string | null>(null);
   
   // Local edit buffer
   const [formData, setFormData] = useState<SiteCmsContent>(content);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const imageEditorRef = useRef<HTMLDivElement>(null);
+  const replacementSelectRef = useRef<HTMLSelectElement>(null);
 
   // Sync if content changes from server
   React.useEffect(() => {
     setFormData(content);
   }, [content]);
+
+  React.useEffect(() => {
+    if (activeTab !== 'media') return;
+    let active = true;
+    setMediaLoading(true);
+    setMediaError(null);
+    adminFetch('/api/admin/media')
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'MEDIA_LIST_FAILED');
+        if (active) {
+          setMediaAssets(data);
+          setSelectedImageSource((current) => current || data[0]?.url || '');
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to load CMS media library:', error);
+        if (active) setMediaError(adminText(lang, 'Nie udało się wczytać biblioteki zdjęć.'));
+      })
+      .finally(() => {
+        if (active) setMediaLoading(false);
+      });
+    return () => { active = false; };
+  }, [activeTab, lang]);
+
+  const translationEntries = useMemo(
+    () => collectTranslatableStrings(translations[translationLanguage]),
+    [translationLanguage],
+  );
+  const translationSections = useMemo(
+    () => [...new Set(translationEntries.map(({ key }) => key.split('.')[0]))],
+    [translationEntries],
+  );
+  const visibleTranslationEntries = translationEntries.filter(({ key, value }) =>
+    (translationSection === 'all' || key.split('.')[0] === translationSection)
+    && (!translationSearch || `${key} ${value}`.toLocaleLowerCase().includes(translationSearch.toLocaleLowerCase())),
+  );
 
   const handleSave = async () => {
     setSaving(true);
@@ -43,12 +113,13 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
     try {
       const res = await updateCmsContent(formData);
       if (res.success) {
-        setSaveStatus({ type: 'success', message: res.message || 'Wszystkie zmiany w CMS zostały pomyślnie zapisane!' });
+        setSaveStatus({ type: 'success', message: adminText(lang, 'Wszystkie zmiany w CMS zostały pomyślnie zapisane!') });
       } else {
-        setSaveStatus({ type: 'error', message: res.message || 'Wystąpił błąd podczas zapisywania' });
+        setSaveStatus({ type: 'error', message: adminText(lang, 'Wystąpił błąd podczas zapisywania') });
       }
-    } catch (err: any) {
-      setSaveStatus({ type: 'error', message: err.message || 'Błąd połączenia' });
+    } catch (error) {
+      console.error('Failed to save CMS image changes:', error);
+      setSaveStatus({ type: 'error', message: adminText(lang, 'Błąd połączenia') });
     } finally {
       setSaving(false);
       setTimeout(() => setSaveStatus(null), 5000);
@@ -75,24 +146,134 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
     if (!file) return;
 
     setUploadingImage(true);
-    const data = new FormData();
-    data.append('image', file);
 
     try {
+      if (!file.type.startsWith('image/')) {
+        throw new Error(adminText(lang, 'Wybierz prawidłowy plik obrazu.'));
+      }
+      const imageData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string'
+          ? resolve(reader.result)
+          : reject(new Error(adminText(lang, 'Nie udało się odczytać obrazu.')));
+        reader.onerror = () => reject(new Error(adminText(lang, 'Nie udało się odczytać obrazu.')));
+        reader.readAsDataURL(file);
+      });
       const res = await adminFetch('/api/admin/upload-image', {
         method: 'POST',
-        body: data,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData, fileName: file.name }),
       });
       if (res.ok) {
         const json = await res.json();
         callback(json.url);
       } else {
-        alert(adminText(lang, 'Błąd podczas przesyłania zdjęcia.'));
+        const error = await res.json();
+        console.error('Image upload failed:', error);
+        throw new Error(adminText(lang, 'Błąd podczas przesyłania zdjęcia.'));
       }
     } catch (err) {
-      alert(adminText(lang, 'Błąd sieci podczas wgrywania pliku.'));
+      const localizedErrors = [
+        adminText(lang, 'Wybierz prawidłowy plik obrazu.'),
+        adminText(lang, 'Nie udało się odczytać obrazu.'),
+        adminText(lang, 'Błąd podczas przesyłania zdjęcia.'),
+      ];
+      const message = err instanceof Error && localizedErrors.includes(err.message)
+        ? err.message
+        : adminText(lang, 'Błąd sieci podczas wgrywania pliku.');
+      console.error('Image upload failed:', err);
+      alert(message);
     } finally {
       setUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const selectImageSource = (url: string) => {
+    setSelectedImageSource(url);
+    const currentOverride = formData.imageOverrides?.[url];
+    setReplacementImage(currentOverride && currentOverride !== CMS_IMAGE_REMOVED ? currentOverride : '');
+  };
+
+  const handleEditImage = (url: string) => {
+    selectImageSource(url);
+    window.requestAnimationFrame(() => {
+      imageEditorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      replacementSelectRef.current?.focus({ preventScroll: true });
+    });
+  };
+
+  const handleReplaceImage = () => {
+    if (!selectedImageSource || !replacementImage) return;
+    setFormData(previous => {
+      const imageOverrides = { ...previous.imageOverrides };
+      if (replacementImage === selectedImageSource) {
+        delete imageOverrides[selectedImageSource];
+      } else {
+        imageOverrides[selectedImageSource] = replacementImage;
+      }
+      return { ...previous, imageOverrides };
+    });
+    setMediaNotice(adminText(lang, 'Zmiany zdjęć zapisują się po kliknięciu „Zapisz w CMS”. Podmiana dotyczy wszystkich miejsc używających tego pliku.'));
+  };
+
+  const handleRemoveImageFromSite = () => {
+    if (!selectedImageSource) return;
+    if (!window.confirm(adminText(lang, 'Czy usunąć to zdjęcie ze strony we wszystkich miejscach, w których jest używane? Możesz je przywrócić przed zapisaniem zmian.'))) return;
+    setFormData(previous => ({
+      ...previous,
+      imageOverrides: { ...previous.imageOverrides, [selectedImageSource]: CMS_IMAGE_REMOVED },
+    }));
+    setReplacementImage('');
+    setMediaNotice(adminText(lang, 'Zdjęcie jest ukryte na stronie. Zapisz zmiany w CMS, aby je opublikować.'));
+  };
+
+  const handleRestoreImage = () => {
+    if (!selectedImageSource) return;
+    setFormData(previous => {
+      const imageOverrides = { ...previous.imageOverrides };
+      delete imageOverrides[selectedImageSource];
+      return { ...previous, imageOverrides };
+    });
+    setReplacementImage('');
+    setMediaNotice(adminText(lang, 'Zmiany zdjęć zapisują się po kliknięciu „Zapisz w CMS”. Podmiana dotyczy wszystkich miejsc używających tego pliku.'));
+  };
+
+  const handleDeleteUploadedImage = async (asset: CmsMediaAsset) => {
+    if (!asset.name.startsWith('upload-') || deletingImage) return;
+    if (containsMediaUrl(formData, asset.url)) {
+      setMediaError(adminText(lang, 'Nie można usunąć pliku, ponieważ jest nadal używany przez treść strony lub pokój.'));
+      return;
+    }
+    if (!window.confirm(adminText(lang, 'Czy trwale usunąć przesłany plik z biblioteki? Tej czynności nie można cofnąć.'))) return;
+
+    setDeletingImage(asset.url);
+    setMediaError(null);
+    try {
+      const response = await adminFetch(`/api/admin/media/${encodeURIComponent(asset.name)}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'MEDIA_DELETE_FAILED');
+
+      setMediaAssets(previous => previous.filter(item => item.url !== asset.url));
+      if (selectedImageSource === asset.url) {
+        const nextSource = mediaAssets.find(item => item.url !== asset.url)?.url || '';
+        selectImageSource(nextSource);
+      }
+      if (replacementImage === asset.url) setReplacementImage('');
+      setMediaNotice(adminText(lang, 'Zdjęcie zostało usunięte z biblioteki.'));
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'MEDIA_DELETE_FAILED';
+      const localizedErrors: Record<string, string> = {
+        MEDIA_FILE_IN_USE: 'Nie można usunąć pliku, ponieważ jest nadal używany przez treść strony lub pokój.',
+        MEDIA_FILE_NOT_MANAGED: 'Można trwale usuwać tylko zdjęcia przesłane do biblioteki. Każde zdjęcie można usunąć ze strony.',
+        MEDIA_FILE_NOT_FOUND: 'Nie znaleziono pliku obrazu. Odśwież bibliotekę i spróbuj ponownie.',
+        MEDIA_DELETE_FAILED: 'Nie udało się usunąć zdjęcia. Sprawdź logi serwera i spróbuj ponownie.',
+        MEDIA_REFERENCE_CHECK_FAILED: 'Nie udało się sprawdzić, czy zdjęcie jest używane. Plik nie został usunięty; spróbuj ponownie później.',
+      };
+      console.error('Failed to delete CMS media asset:', error);
+      setMediaError(adminText(lang, localizedErrors[code] || 'Nie udało się usunąć zdjęcia.'));
+    } finally {
+      setDeletingImage(null);
     }
   };
 
@@ -238,13 +419,15 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
           { id: 'restaurant', label: adminText(lang, 'Karczma & Menu'), icon: UtensilsCrossed },
           { id: 'wellness', label: adminText(lang, 'Jacuzzi & Sauna'), icon: Waves },
           { id: 'contact', label: adminText(lang, 'Dojazd & Stopka'), icon: MapPin },
+          { id: 'translations', label: adminText(lang, 'Teksty strony'), icon: Languages },
+          { id: 'media', label: adminText(lang, 'Zdjęcia'), icon: ImageIcon },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                 isActive 
                   ? 'bg-[#1E3A2B] text-white shadow-sm' 
@@ -844,7 +1027,7 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Tytuł Sauny')}</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Nagłówek Fitness & Wellbeing')}</label>
                 <input
                   type="text"
                   value={formData.wellness.saunaTitle}
@@ -864,7 +1047,7 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Opis Sauny Fińskiej')}</label>
+                <label className="block text-xs font-bold text-neutral-700 uppercase mb-1">{adminText(lang, 'Opis Fitness & Wellbeing')}</label>
                 <textarea
                   rows={2}
                   value={formData.wellness.saunaDescription}
@@ -954,6 +1137,246 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
                   className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm"
                 />
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'translations' && (
+          <div className="space-y-6">
+            <div className="border-b border-neutral-100 pb-4">
+              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Teksty i tłumaczenia strony')}</h3>
+              <p className="text-xs text-neutral-500">
+                {adminText(lang, 'Edytuj teksty interfejsu używane na stronach publicznych. Zmiany dotyczą wybranego języka i są widoczne po zapisaniu CMS.')}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <label className="space-y-1 text-xs font-semibold text-neutral-700">
+                <span>{adminText(lang, 'Język')}</span>
+                <select
+                  value={translationLanguage}
+                  onChange={event => setTranslationLanguage(event.target.value as Language)}
+                  className="w-full rounded-xl border border-neutral-300 px-3 py-2.5 text-sm"
+                >
+                  <option value="pl">Polski</option>
+                  <option value="en">English</option>
+                  <option value="sk">Slovenčina</option>
+                  <option value="de">Deutsch</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-xs font-semibold text-neutral-700">
+                <span>{adminText(lang, 'Sekcja strony')}</span>
+                <select
+                  value={translationSection}
+                  onChange={event => setTranslationSection(event.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 px-3 py-2.5 text-sm"
+                >
+                  <option value="all">{adminText(lang, 'Wszystkie sekcje')}</option>
+                  {translationSections.map(section => <option key={section} value={section}>{section}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1 text-xs font-semibold text-neutral-700">
+                <span>{adminText(lang, 'Szukaj tekstu')}</span>
+                <span className="flex items-center rounded-xl border border-neutral-300 px-3">
+                  <Search className="h-4 w-4 text-neutral-400" />
+                  <input
+                    value={translationSearch}
+                    onChange={event => setTranslationSearch(event.target.value)}
+                    className="w-full border-0 px-2 py-2.5 text-sm outline-none"
+                    placeholder={adminText(lang, 'Nazwa lub treść')}
+                  />
+                </span>
+              </label>
+            </div>
+            <p className="text-xs text-neutral-500">
+              {adminText(lang, 'Pola tekstowe')}: {visibleTranslationEntries.length}
+            </p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {visibleTranslationEntries.map(({ key, value }) => {
+                const currentValue = formData.translationOverrides?.[translationLanguage]?.[key] ?? value;
+                const updateValue = (nextValue: string) => setFormData(previous => ({
+                  ...previous,
+                  translationOverrides: {
+                    ...previous.translationOverrides,
+                    [translationLanguage]: {
+                      ...previous.translationOverrides?.[translationLanguage],
+                      [key]: nextValue,
+                    },
+                  },
+                }));
+                return (
+                  <label key={key} className="space-y-1 text-xs font-semibold text-neutral-700">
+                    <span className="break-all">{key}</span>
+                    {value.length > 110 ? (
+                      <textarea
+                        rows={3}
+                        value={currentValue}
+                        onChange={event => updateValue(event.target.value)}
+                        className="w-full rounded-xl border border-neutral-300 px-3 py-2.5 text-sm font-normal"
+                      />
+                    ) : (
+                      <input
+                        value={currentValue}
+                        onChange={event => updateValue(event.target.value)}
+                        className="w-full rounded-xl border border-neutral-300 px-3 py-2.5 text-sm font-normal"
+                      />
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+            {visibleTranslationEntries.length === 0 && (
+              <p className="rounded-xl bg-neutral-50 p-6 text-center text-sm text-neutral-500">{adminText(lang, 'Brak tekstów pasujących do wyszukiwania.')}</p>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'media' && (
+          <div className="space-y-6">
+            <div className="border-b border-neutral-100 pb-4">
+              <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Biblioteka zdjęć strony')}</h3>
+              <p className="text-xs text-neutral-500">{adminText(lang, 'Zmiany zdjęć zapisują się po kliknięciu „Zapisz w CMS”. Podmiana dotyczy wszystkich miejsc używających tego pliku.')}</p>
+              <p className="mt-1 text-xs text-neutral-500">{adminText(lang, 'Możesz też usunąć obraz ze strony. Przesłane pliki można trwale skasować, jeśli nie są używane.')}</p>
+            </div>
+            {mediaError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{mediaError}</p>}
+            {mediaNotice && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{mediaNotice}</p>}
+            {mediaLoading && <p className="text-sm text-neutral-500">{adminText(lang, 'Wczytywanie zdjęć...')}</p>}
+            {!mediaLoading && mediaAssets.length === 0 && !mediaError && (
+              <p className="rounded-xl bg-neutral-50 p-6 text-center text-sm text-neutral-500">{adminText(lang, 'Brak zdjęć w bibliotece.')}</p>
+            )}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+              <div ref={imageEditorRef} className="space-y-2 rounded-xl text-xs font-semibold text-neutral-700">
+                <label className="block">
+                  <span className="mb-2 block">{adminText(lang, 'Zdjęcie do podmiany')}</span>
+                  <select
+                    value={selectedImageSource}
+                    onChange={event => selectImageSource(event.target.value)}
+                    className="w-full rounded-xl border border-neutral-300 px-3 py-2.5 text-sm"
+                  >
+                    {mediaAssets.map(asset => <option key={asset.url} value={asset.url}>{asset.name}</option>)}
+                  </select>
+                </label>
+                {selectedImageSource && (
+                  formData.imageOverrides?.[selectedImageSource] === CMS_IMAGE_REMOVED
+                    ? <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 text-neutral-500">
+                        <ImageOff className="h-8 w-8" />
+                        <span>{adminText(lang, 'Zdjęcie jest ukryte na stronie. Zapisz zmiany w CMS, aby je opublikować.')}</span>
+                      </div>
+                    : <div className="overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
+                        <img
+                          src={formData.imageOverrides?.[selectedImageSource] || selectedImageSource}
+                          alt={mediaAssets.find(asset => asset.url === selectedImageSource)?.name || ''}
+                          className="h-56 w-full object-cover"
+                        />
+                      </div>
+                )}
+              </div>
+              <div className="space-y-3">
+                <label className="block text-xs font-semibold text-neutral-700">
+                  <span className="mb-2 block">{adminText(lang, 'Wybierz nowe zdjęcie')}</span>
+                  <select
+                    ref={replacementSelectRef}
+                    value={replacementImage}
+                    onChange={event => setReplacementImage(event.target.value)}
+                    disabled={!selectedImageSource}
+                    className="w-full rounded-xl border border-neutral-300 px-3 py-2.5 text-sm font-normal"
+                  >
+                    <option value="">{adminText(lang, 'Wybierz obraz z biblioteki')}</option>
+                    {mediaAssets.map(asset => <option key={asset.url} value={asset.url}>{asset.name}</option>)}
+                  </select>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleReplaceImage}
+                    disabled={!selectedImageSource || !replacementImage || uploadingImage}
+                    className="rounded-lg bg-[#1E3A2B] px-3 py-2 text-xs font-semibold text-white hover:bg-[#2A4F3B] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {adminText(lang, 'Zamień zdjęcie')}
+                  </button>
+                  <label className={`cursor-pointer rounded-lg border border-neutral-300 px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 ${uploadingImage ? 'pointer-events-none opacity-50' : ''}`}>
+                    <Upload className="mr-1 inline h-4 w-4" />
+                    {uploadingImage ? adminText(lang, 'Wgrywanie...') : adminText(lang, 'Wgraj zdjęcie')}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingImage}
+                      className="sr-only"
+                      onChange={event => handleUpload(event, url => {
+                        const name = url.split('/').pop() || url;
+                        if (selectedImageSource) {
+                          setFormData(previous => ({
+                            ...previous,
+                            imageOverrides: { ...previous.imageOverrides, [selectedImageSource]: url },
+                          }));
+                          setReplacementImage(url);
+                        }
+                        setMediaAssets(previous => [...previous, { name, url }]);
+                        setMediaNotice(adminText(lang, 'Zmiany zdjęć zapisują się po kliknięciu „Zapisz w CMS”. Podmiana dotyczy wszystkich miejsc używających tego pliku.'));
+                      })}
+                    />
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedImageSource && formData.imageOverrides?.[selectedImageSource] !== CMS_IMAGE_REMOVED && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImageFromSite}
+                      className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    >
+                      {adminText(lang, 'Usuń ze strony')}
+                    </button>
+                  )}
+                  {selectedImageSource && formData.imageOverrides?.[selectedImageSource] && (
+                    <button
+                      type="button"
+                      onClick={handleRestoreImage}
+                      className="rounded-lg border border-neutral-300 px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+                    >
+                      {adminText(lang, 'Przywróć zdjęcie')}
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-neutral-500">{mediaAssets.length} {adminText(lang, 'zdjęć w bibliotece')}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {mediaAssets.map(asset => (
+                <div
+                  key={asset.url}
+                  className={`overflow-hidden rounded-xl border transition-colors ${selectedImageSource === asset.url ? 'border-[#1E3A2B] ring-2 ring-[#1E3A2B]/20' : 'border-neutral-200 hover:border-neutral-400'}`}
+                >
+                  <button type="button" onClick={() => selectImageSource(asset.url)} className="block w-full text-left">
+                    {formData.imageOverrides?.[asset.url] === CMS_IMAGE_REMOVED
+                      ? <span className="flex h-24 items-center justify-center bg-neutral-100 text-neutral-400"><ImageOff className="h-6 w-6" /></span>
+                      : <img src={formData.imageOverrides?.[asset.url] || asset.url} alt={asset.name} className="h-24 w-full object-cover" />}
+                    <span className="block truncate px-2 py-1.5 text-[10px] text-neutral-700">{asset.name}</span>
+                  </button>
+                  <div className="flex items-center justify-between border-t border-neutral-100 px-2 py-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleEditImage(asset.url)}
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#1E3A2B] hover:underline"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      {adminText(lang, 'Edytuj')}
+                    </button>
+                    {asset.name.startsWith('upload-') && (
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteUploadedImage(asset)}
+                        disabled={deletingImage === asset.url || containsMediaUrl(formData, asset.url)}
+                        title={containsMediaUrl(formData, asset.url)
+                          ? adminText(lang, 'Nie można usunąć pliku, ponieważ jest nadal używany przez treść strony lub pokój.')
+                          : adminText(lang, 'Usuń plik')}
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        {deletingImage === asset.url ? adminText(lang, 'Usuwanie...') : adminText(lang, 'Usuń plik')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

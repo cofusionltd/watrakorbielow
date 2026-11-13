@@ -1,8 +1,8 @@
+import { CmsManagedImage } from './CmsManagedImage';
 import React, { useState, useEffect } from 'react';
 import { Phone, Calendar, Menu, X, ChevronDown, Sparkles, MapPin, Globe, Shield, Lock } from 'lucide-react';
 import { Language, PageView } from '../types';
-import { translations } from '../translations';
-import { useCms } from '../context/CmsContext';
+import {useCms, useCmsTranslations} from '../context/CmsContext';
 
 interface HeaderProps {
   lang: Language;
@@ -22,9 +22,9 @@ export const Header: React.FC<HeaderProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
-  const { content } = useCms();
+  const { content, siteSettings } = useCms();
 
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
     { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
   ];
 
-  const navItems: { page: PageView; label: string }[] = [
+  const navItems = ([
     { page: 'home', label: t.nav.home || 'Główna' },
     { page: 'about', label: t.nav.about },
     { page: 'rooms', label: t.nav.rooms },
@@ -54,7 +54,8 @@ export const Header: React.FC<HeaderProps> = ({
     { page: 'restaurant', label: t.nav.dining },
     { page: 'packages', label: t.nav.packages },
     { page: 'contact', label: t.nav.contact },
-  ];
+  ] satisfies { page: Exclude<PageView, 'admin'>; label: string }[])
+    .filter((item) => siteSettings.pages[item.page]);
 
   const handleLinkClick = (page: PageView) => {
     onNavigate(page);
@@ -62,10 +63,12 @@ export const Header: React.FC<HeaderProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  if (!siteSettings.components.header) return null;
+
   return (
     <>
       {/* Top micro-bar for quick contact and notice */}
-      <div id="top-announcement-bar" className="bg-[#14281E] text-[#F9F8F6]/80 text-xs py-2 px-4 border-b border-[#2A4F3B]/40 hidden md:block">
+      {siteSettings.components.announcementBar && <div id="top-announcement-bar" className="bg-[#14281E] text-[#F9F8F6]/80 text-xs py-2 px-4 border-b border-[#2A4F3B]/40 hidden md:block">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <span className="flex items-center space-x-1.5 text-[#D4A373]">
@@ -101,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
             </a>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Main navigation header */}
       <header
@@ -120,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({
             id="site-logo-link"
           >
             <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-md flex items-center justify-center border border-[#D4A373]/60 group-hover:border-[#D4A373] transition-all shrink-0 bg-[#BA926E]">
-              <img
+              <CmsManagedImage
                 src="/images/logo.png"
                 alt="Watra Korbielów Logo"
                 className="w-full h-full object-cover"
@@ -140,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {/* Desktop Multi-Page Nav Links */}
-          <nav className="hidden xl:flex items-center space-x-5 2xl:space-x-6" aria-label="Main Navigation">
+          <nav className="hidden xl:flex items-center space-x-5 2xl:space-x-6" aria-label={t.nav.mainNavigation}>
             {navItems.map((item) => (
               <button
                 key={item.page}
@@ -164,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
                 id="language-selector-button"
                 onClick={() => setLangDropdownOpen(!langDropdownOpen)}
                 className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#F9F8F6] bg-white/10 hover:bg-white/15 transition-colors border border-white/10 cursor-pointer"
-                aria-label="Wybierz język"
+                aria-label={t.nav.languageSelector}
               >
                 <Globe className="w-3.5 h-3.5 text-[#D4A373]" />
                 <span className="uppercase">{lang}</span>
@@ -199,14 +202,14 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Direct Booking Modal CTA */}
-            <button
+            {siteSettings.features.reservations && <button
               id="header-booking-cta-button"
               onClick={() => onOpenBooking()}
               className="flex items-center space-x-2 bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-4 py-2 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all transform active:scale-95 cursor-pointer uppercase tracking-wider"
             >
               <Calendar className="w-3.5 h-3.5 text-[#14281E]" />
               <span>{t.nav.bookNow}</span>
-            </button>
+            </button>}
           </div>
 
           {/* Mobile Menu Hamburger Button */}
@@ -223,7 +226,7 @@ export const Header: React.FC<HeaderProps> = ({
               id="mobile-menu-toggle-btn"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-[#F9F8F6] hover:text-[#D4A373] rounded-md focus:outline-hidden"
-              aria-label="Toggle menu"
+              aria-label={t.nav.menuToggle}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -296,7 +299,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>+48 511 660 511</span>
               </a>
 
-              <button
+              {siteSettings.features.reservations && <button
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onOpenBooking();
@@ -305,7 +308,7 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Calendar className="w-4 h-4" />
                 <span>{t.nav.bookNow}</span>
-              </button>
+              </button>}
             </div>
           </div>
         )}

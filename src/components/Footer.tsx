@@ -1,8 +1,8 @@
+import { CmsManagedImage } from './CmsManagedImage';
 import React from 'react';
 import { Phone, Mail, MapPin, Clock, CreditCard, ShieldCheck, Heart, ExternalLink, Instagram, Facebook, Lock } from 'lucide-react';
 import { Language, PageView } from '../types';
-import { translations } from '../translations';
-import { useCms } from '../context/CmsContext';
+import {useCms, useCmsTranslations} from '../context/CmsContext';
 
 interface FooterProps {
   lang: Language;
@@ -11,13 +11,26 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ lang, onNavigate, onOpenBooking }) => {
-  const t = translations[lang];
-  const { content } = useCms();
+  const t = useCmsTranslations(lang);
+  const { content, siteSettings } = useCms();
+  const navigationItems = ([
+    { page: 'home', label: t.footerExtra?.homeLink || 'Strona Główna' },
+    { page: 'about', label: t.footerExtra?.aboutLink || 'O nas & Położenie' },
+    { page: 'rooms', label: t.footerExtra?.roomsLink || 'Pokoje & Cennik' },
+    { page: 'seasons', label: t.footerExtra?.seasonsLink || 'Zima & Lato w Beskidach' },
+    { page: 'wellness', label: t.footerExtra?.wellnessLink || 'Jacuzzi & Sauna' },
+    { page: 'restaurant', label: t.footerExtra?.restaurantLink || 'Restauracja & Grill' },
+    { page: 'packages', label: t.footerExtra?.packagesLink || 'Pakiety & Promocje' },
+    { page: 'contact', label: t.footerExtra?.contactLink || 'Kontakt & Dojazd' },
+  ] satisfies { page: Exclude<PageView, 'admin'>; label: string }[])
+    .filter(({ page }) => siteSettings.pages[page]);
 
   const handlePageClick = (page: PageView) => {
     onNavigate(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  if (!siteSettings.components.footer) return null;
 
   return (
     <footer id="footer-section" className="bg-[#14281E] text-white pt-16 pb-12 border-t border-[#2A4F3B]">
@@ -28,7 +41,7 @@ export const Footer: React.FC<FooterProps> = ({ lang, onNavigate, onOpenBooking 
           <div className="lg:col-span-4 space-y-4">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 rounded-xl overflow-hidden shadow-md flex items-center justify-center border border-[#D4A373] shrink-0 bg-[#BA926E]">
-                <img
+                <CmsManagedImage
                   src="/images/logo.png"
                   alt="Watra Korbielów"
                   className="w-full h-full object-cover"
@@ -39,13 +52,15 @@ export const Footer: React.FC<FooterProps> = ({ lang, onNavigate, onOpenBooking 
                   Watra Korbielów
                 </span>
                 <span className="text-[11px] tracking-[0.2em] uppercase text-[#D4A373] font-semibold">
-                  Ośrodek • Restauracja
+                  {t.footerExtra?.brandDescriptor || 'Ośrodek • Restauracja'}
                 </span>
               </div>
             </div>
 
             <p className="text-xs text-white/70 leading-relaxed max-w-sm">
-              {content.footer.aboutSnippet || 'Całoroczny resort górski położony w Korbielowie w Beskidzie Żywieckim, 100 m od stoków narciarskich i szlaków na szczyt Pilska (1557 m n.p.m.).'}
+              {lang === 'pl'
+                ? content.footer.aboutSnippet || t.footerExtra?.aboutSnippet
+                : t.footerExtra?.aboutSnippet || content.footer.aboutSnippet}
             </p>
 
             <div className="pt-2">
@@ -110,46 +125,13 @@ export const Footer: React.FC<FooterProps> = ({ lang, onNavigate, onOpenBooking 
               {t.footerExtra?.pagesTitle || 'Strony & Sekcje'}
             </h3>
             <ul className="space-y-1.5 text-xs text-white/80">
-              <li>
-                <button onClick={() => handlePageClick('home')} className="hover:text-[#D4A373] transition-colors cursor-pointer text-left">
-                  {t.footerExtra?.homeLink || 'Strona Główna'}
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handlePageClick('about')} className="hover:text-[#D4A373] transition-colors cursor-pointer text-left">
-                  {t.footerExtra?.aboutLink || 'O nas & Położenie'}
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handlePageClick('rooms')} className="hover:text-[#D4A373] transition-colors cursor-pointer text-left">
-                  {t.footerExtra?.roomsLink || 'Pokoje & Cennik'}
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handlePageClick('seasons')} className="hover:text-[#D4A373] transition-colors cursor-pointer text-left">
-                  {t.footerExtra?.seasonsLink || 'Zima & Lato w Beskidach'}
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handlePageClick('wellness')} className="hover:text-[#D4A373] transition-colors cursor-pointer text-left">
-                  {t.footerExtra?.wellnessLink || 'Jacuzzi & Sauna'}
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handlePageClick('restaurant')} className="hover:text-[#D4A373] transition-colors cursor-pointer text-left">
-                  {t.footerExtra?.restaurantLink || 'Restauracja & Grill'}
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handlePageClick('packages')} className="hover:text-[#D4A373] transition-colors cursor-pointer text-left">
-                  {t.footerExtra?.packagesLink || 'Pakiety & Promocje'}
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handlePageClick('contact')} className="hover:text-[#D4A373] transition-colors cursor-pointer text-left">
-                  {t.footerExtra?.contactLink || 'Kontakt & Dojazd'}
-                </button>
-              </li>
+              {navigationItems.map(({ page, label }) => (
+                <li key={page}>
+                  <button onClick={() => handlePageClick(page)} className="hover:text-[#D4A373] transition-colors cursor-pointer text-left">
+                    {label}
+                  </button>
+                </li>
+              ))}
               <li className="pt-1">
                 <button onClick={() => handlePageClick('admin')} className="text-[#D4A373] hover:text-white transition-colors cursor-pointer flex items-center space-x-1">
                   <Lock className="w-3 h-3" />
@@ -158,14 +140,14 @@ export const Footer: React.FC<FooterProps> = ({ lang, onNavigate, onOpenBooking 
               </li>
             </ul>
 
-            <div className="pt-2">
+            {siteSettings.features.reservations && <div className="pt-2">
               <button
                 onClick={onOpenBooking}
                 className="w-full bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] font-bold text-xs uppercase py-2 px-3 rounded-lg transition-colors cursor-pointer"
               >
                 {t.footerExtra?.bookOnlineBtn || 'Rezerwuj online'}
               </button>
-            </div>
+            </div>}
           </div>
         </div>
 

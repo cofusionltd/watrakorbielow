@@ -32,6 +32,18 @@ export const bookingRateLimiter = rateLimit({
   }
 });
 
+export const contactInquiryRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: rateLimitValidateConfig,
+  message: {
+    error: 'RATE_LIMIT_EXCEEDED',
+    message: 'Wysłano zbyt wiele zapytań. Spróbuj ponownie później lub skontaktuj się telefonicznie.'
+  }
+});
+
 // Rate limiter for admin login attempts (/api/admin/login)
 export const adminLoginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

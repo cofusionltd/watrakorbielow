@@ -1,3 +1,4 @@
+import { CmsManagedImage } from '../CmsManagedImage';
 import React, { useState, useEffect } from 'react';
 import {
   Bed,
@@ -247,7 +248,7 @@ export const AdminRoomsManager: React.FC<{ lang: Language }> = ({ lang }) => {
             <div>
               {/* Photo preview carousel/thumbnails */}
               <div className="relative h-48 bg-stone-100 overflow-hidden group">
-                <img
+                <CmsManagedImage
                   src={room.images[0] || '/images/image-22.jpg'}
                   alt={room.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

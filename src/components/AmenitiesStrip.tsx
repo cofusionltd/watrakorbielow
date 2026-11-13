@@ -1,14 +1,14 @@
+import { useCmsTranslations } from '../context/CmsContext';
 import React from 'react';
 import { Wifi, Utensils, Waves, MountainSnow, Flame, Activity, ShieldCheck, Car } from 'lucide-react';
 import { Language } from '../types';
-import { translations } from '../translations';
 
 interface AmenitiesStripProps {
   lang: Language;
 }
 
 export const AmenitiesStrip: React.FC<AmenitiesStripProps> = ({ lang }) => {
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   const amenities = [
     {

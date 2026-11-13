@@ -2,11 +2,13 @@ import { Request, Response } from 'express';
 import { SiteCmsContent } from '../src/types';
 import fs from 'fs';
 import path from 'path';
+import { dbGetCmsContent, dbSaveCmsContent } from '../src/db/repository.ts';
 
-// File-based durable backup path so edits survive reloads
-const CMS_STORAGE_FILE = path.join(process.cwd(), 'server', 'cms_data.json');
+const legacyCmsFile = path.join(process.cwd(), 'server', 'cms_data.json');
 
 export const defaultCmsContent: SiteCmsContent = {
+  translationOverrides: {},
+  imageOverrides: {},
   resort: {
     name: "Watra Korbielów",
     tagline: "Ośrodek • Restauracja • SPA",
@@ -198,8 +200,8 @@ export const defaultCmsContent: SiteCmsContent = {
     jacuzziDescription: "Nasze zewnętrzne jacuzzi zostało wykonane z naturalnego drewna modrzewiowego. Zapewnia kąpiele pod gwiazdami w wodzie o temperaturze 38°C, nawet przy temperaturach -15°C i padającym śniegu. Zaawansowane dysze masują zmęczone mięśnie po nartach.",
     jacuzziTemp: "38°C",
     jacuzziHours: "16:00 – 22:00 codziennie",
-    saunaTitle: "Tradycyjna Sucha Sauna Fińska",
-    saunaDescription: "Sosnowa sauna fińska rozgrzewająca ciało do temperatury 85-95°C. Oczyszcza organizm z toksyn, poprawia krążenie i przyspiesza regenerację po wysiłku fizycznym na beskidzkich szlakach.",
+    saunaTitle: "Fitness i dobre samopoczucie",
+    saunaDescription: "Sala fitness z bieżnią i rowerkiem pozwala zadbać o kondycję, a strefa relaksu pomaga odzyskać siły po górskich aktywnościach.",
     saunaTemp: "85°C - 95°C",
     vipReservationNote: "Możliwość rezerwacji strefy jacuzzi na wyłączność na 60 minut z powitalną butelką schłodzonego wina musującego i paterą świeżych owoców.",
     pricingNote: "Wstęp do strefy wellness jest bezpłatny w wybranych pakietach lub dostępny za opłatą 40 zł/os. za seans.",
@@ -238,34 +240,55 @@ export const defaultCmsContent: SiteCmsContent = {
   }
 };
 
-// In-memory active CMS state
-let currentCmsContent: SiteCmsContent = { ...defaultCmsContent };
+const mergeCmsContent = (content: Partial<SiteCmsContent>): SiteCmsContent => ({
+  ...defaultCmsContent,
+  ...content,
+  translationOverrides: content.translationOverrides || {},
+  imageOverrides: content.imageOverrides || {},
+  resort: { ...defaultCmsContent.resort, ...(content.resort || {}) },
+  hero: { ...defaultCmsContent.hero, ...(content.hero || {}) },
+  about: { ...defaultCmsContent.about, ...(content.about || {}) },
+  restaurant: { ...defaultCmsContent.restaurant, ...(content.restaurant || {}) },
+  wellness: { ...defaultCmsContent.wellness, ...(content.wellness || {}) },
+  rehabilitation: { ...defaultCmsContent.rehabilitation, ...(content.rehabilitation || {}) },
+  contact: { ...defaultCmsContent.contact, ...(content.contact || {}) },
+  footer: { ...defaultCmsContent.footer, ...(content.footer || {}) },
+});
 
-// Try loading persisted file on boot if exists
-try {
-  if (fs.existsSync(CMS_STORAGE_FILE)) {
-    const raw = fs.readFileSync(CMS_STORAGE_FILE, 'utf-8');
-    const parsed = JSON.parse(raw);
-    currentCmsContent = {
-      ...defaultCmsContent,
-      ...parsed,
-      resort: { ...defaultCmsContent.resort, ...(parsed.resort || {}) },
-      hero: { ...defaultCmsContent.hero, ...(parsed.hero || {}) },
-      about: { ...defaultCmsContent.about, ...(parsed.about || {}) },
-      restaurant: { ...defaultCmsContent.restaurant, ...(parsed.restaurant || {}) },
-      wellness: { ...defaultCmsContent.wellness, ...(parsed.wellness || {}) },
-      rehabilitation: { ...defaultCmsContent.rehabilitation, ...(parsed.rehabilitation || {}) },
-      contact: { ...defaultCmsContent.contact, ...(parsed.contact || {}) },
-      footer: { ...defaultCmsContent.footer, ...(parsed.footer || {}) },
-    };
-  }
-} catch (e) {
-  console.warn("Could not load cms_data.json, using defaults:", e);
+export async function initializeCmsContent(): Promise<void> {
+  if (await dbGetCmsContent()) return;
+
+  const legacyContent = fs.existsSync(legacyCmsFile)
+    ? JSON.parse(fs.readFileSync(legacyCmsFile, 'utf-8')) as Partial<SiteCmsContent>
+    : defaultCmsContent;
+  await dbSaveCmsContent(mergeCmsContent(legacyContent));
 }
 
-// GET /api/cms/content
+export async function getCmsContent(): Promise<SiteCmsContent> {
+  const content = await dbGetCmsContent();
+  if (!content) throw new Error('CMS content has not been initialized in the database.');
+  return mergeCmsContent(content as Partial<SiteCmsContent>);
+}
+
 export async function handleGetCmsContent(_req: Request, res: Response) {
-  res.json(currentCmsContent);
+  try {
+    res.json(await getCmsContent());
+  } catch (error) {
+    console.error('CMS read failed:', error);
+    res.status(503).json({ error: 'Nie udało się pobrać treści CMS z bazy danych.' });
+  }
+}
+
+export async function hasCmsImageReference(imageUrl: string): Promise<boolean> {
+  const containsReference = (value: unknown): boolean => {
+    if (value === imageUrl) return true;
+    if (Array.isArray(value)) return value.some(containsReference);
+    if (value && typeof value === 'object') {
+      return Object.entries(value).some(([key, nestedValue]) => key === imageUrl || containsReference(nestedValue));
+    }
+    return typeof value === 'string' && value.includes(imageUrl);
+  };
+  return containsReference(await getCmsContent());
 }
 
 // PUT /api/admin/cms/content
@@ -276,10 +299,16 @@ export async function handleUpdateCmsContent(req: Request, res: Response) {
       return res.status(400).json({ error: "Nieprawidłowe dane CMS" });
     }
 
-    // Deep merge updates
-    currentCmsContent = {
+    const currentCmsContent = await getCmsContent();
+    const updatedCmsContent = mergeCmsContent({
       ...currentCmsContent,
       ...updates,
+      translationOverrides: updates.translationOverrides
+        ? { ...currentCmsContent.translationOverrides, ...updates.translationOverrides }
+        : currentCmsContent.translationOverrides,
+      imageOverrides: updates.imageOverrides !== undefined
+        ? updates.imageOverrides
+        : currentCmsContent.imageOverrides,
       resort: updates.resort ? { ...currentCmsContent.resort, ...updates.resort } : currentCmsContent.resort,
       hero: updates.hero ? { ...currentCmsContent.hero, ...updates.hero } : currentCmsContent.hero,
       about: updates.about ? { ...currentCmsContent.about, ...updates.about } : currentCmsContent.about,
@@ -288,40 +317,31 @@ export async function handleUpdateCmsContent(req: Request, res: Response) {
       rehabilitation: updates.rehabilitation ? { ...currentCmsContent.rehabilitation, ...updates.rehabilitation } : currentCmsContent.rehabilitation,
       contact: updates.contact ? { ...currentCmsContent.contact, ...updates.contact } : currentCmsContent.contact,
       footer: updates.footer ? { ...currentCmsContent.footer, ...updates.footer } : currentCmsContent.footer,
-    };
-
-    // Save to persistent file
-    try {
-      const dir = path.dirname(CMS_STORAGE_FILE);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(CMS_STORAGE_FILE, JSON.stringify(currentCmsContent, null, 2), 'utf-8');
-    } catch (saveErr) {
-      console.warn("Could not save to cms_data.json:", saveErr);
-    }
+    });
+    await dbSaveCmsContent(updatedCmsContent);
 
     res.json({
       success: true,
       message: "Zawartość serwisu została zaktualizowana w CMS!",
-      content: currentCmsContent
+      content: updatedCmsContent
     });
   } catch (error: any) {
     console.error("CMS update error:", error);
-    res.status(500).json({ error: error.message || "Błąd zapisu danych CMS" });
+    res.status(503).json({ error: error.message || "Błąd zapisu danych CMS" });
   }
 }
 
 // POST /api/admin/cms/reset
 export async function handleResetCmsContent(_req: Request, res: Response) {
-  currentCmsContent = { ...defaultCmsContent };
   try {
-    if (fs.existsSync(CMS_STORAGE_FILE)) {
-      fs.unlinkSync(CMS_STORAGE_FILE);
-    }
-  } catch (_) {}
-
-  res.json({
-    success: true,
-    message: "Przywrócono domyślne treści CMS serwisu Watra Korbielów.",
-    content: currentCmsContent
-  });
+    const content = await dbSaveCmsContent(defaultCmsContent);
+    res.json({
+      success: true,
+      message: "Przywrócono domyślne treści CMS serwisu Watra Korbielów.",
+      content
+    });
+  } catch (error) {
+    console.error("CMS reset failed:", error);
+    res.status(503).json({ error: "Nie udało się przywrócić treści CMS z bazy danych." });
+  }
 }

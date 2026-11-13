@@ -1,7 +1,8 @@
+import { CmsManagedImage } from './CmsManagedImage';
+import { useCmsTranslations } from '../context/CmsContext';
 import React, { useState } from 'react';
 import { Snowflake, Sun, CheckCircle2, MapPin, Compass, ArrowRight } from 'lucide-react';
 import { Language } from '../types';
-import { translations } from '../translations';
 
 interface SeasonalToggleProps {
   lang: Language;
@@ -9,7 +10,7 @@ interface SeasonalToggleProps {
 
 export const SeasonalToggle: React.FC<SeasonalToggleProps> = ({ lang }) => {
   const [season, setSeason] = useState<'winter' | 'summer'>('winter');
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   return (
     <section id="sezony" className="py-20 bg-[#14281E] text-white relative overflow-hidden">
@@ -87,14 +88,14 @@ export const SeasonalToggle: React.FC<SeasonalToggleProps> = ({ lang }) => {
             <div className="lg:col-span-6 grid grid-cols-2 gap-4">
               <div className="space-y-4">
                 <div className="rounded-2xl overflow-hidden shadow-xl border-2 border-white/10 h-64">
-                  <img
+                  <CmsManagedImage
                     src="/images/banner-1.jpg"
                     alt="Panoramiczne widoki Korbielów"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   />
                 </div>
                 <div className="rounded-2xl overflow-hidden shadow-xl border-2 border-white/10 h-44">
-                  <img
+                  <CmsManagedImage
                     src="/images/image-71.jpg"
                     alt="Wyciągi narciarskie Pilsko"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
@@ -104,7 +105,7 @@ export const SeasonalToggle: React.FC<SeasonalToggleProps> = ({ lang }) => {
 
               <div className="space-y-4 pt-6">
                 <div className="rounded-2xl overflow-hidden shadow-xl border-2 border-white/10 h-44">
-                  <img
+                  <CmsManagedImage
                     src="/images/image-72.jpg"
                     alt="Trasa narciarska Korbielów"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
@@ -161,14 +162,14 @@ export const SeasonalToggle: React.FC<SeasonalToggleProps> = ({ lang }) => {
             <div className="lg:col-span-6 grid grid-cols-2 gap-4">
               <div className="space-y-4">
                 <div className="rounded-2xl overflow-hidden shadow-xl border-2 border-white/10 h-64">
-                  <img
+                  <CmsManagedImage
                     src="/images/banner-1.jpg"
                     alt="Letnie szlaki górskie"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   />
                 </div>
                 <div className="rounded-2xl overflow-hidden shadow-xl border-2 border-white/10 h-44">
-                  <img
+                  <CmsManagedImage
                     src="/images/jacuzi.jpg"
                     alt="Letnie jacuzzi w ogrodzie"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
@@ -178,7 +179,7 @@ export const SeasonalToggle: React.FC<SeasonalToggleProps> = ({ lang }) => {
 
               <div className="space-y-4 pt-6">
                 <div className="rounded-2xl overflow-hidden shadow-xl border-2 border-white/10 h-44">
-                  <img
+                  <CmsManagedImage
                     src="/images/image-69.jpg"
                     alt="Okolice Korbielowa latem"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"

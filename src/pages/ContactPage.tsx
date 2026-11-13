@@ -1,6 +1,6 @@
+import { useCmsTranslations } from '../context/CmsContext';
 import React, { useState } from 'react';
 import { Language } from '../types';
-import { translations } from '../translations';
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle2, Car, Navigation, CreditCard, ShieldCheck } from 'lucide-react';
 import { GoogleMapsTripPlanner } from '../components/GoogleMapsTripPlanner';
 
@@ -9,7 +9,7 @@ interface ContactPageProps {
 }
 
 export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   const [formName, setFormName] = useState('');
   const [formEmail, setFormEmail] = useState('');
@@ -18,14 +18,45 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
   const [formMessage, setFormMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setSubmitError('');
+
+    try {
+      const response = await fetch('/api/contact/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formName,
+          email: formEmail,
+          phone: formPhone,
+          dates: formDates,
+          message: formMessage,
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || result.success !== true) {
+        throw new Error(t.contactPage.submitError);
+      }
+
       setIsSubmitted(true);
-    }, 1000);
+      setFormName('');
+      setFormEmail('');
+      setFormPhone('');
+      setFormDates('');
+      setFormMessage('');
+    } catch (error) {
+      console.error('Contact inquiry submission failed:', error);
+      setSubmitError(error instanceof Error ? error.message : t.contactPage.submitError);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -52,7 +83,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
               <Phone className="w-6 h-6" />
             </div>
             <h3 className="font-serif text-lg font-bold text-[#1E3A2B]">{t.contactPage.phoneTitle}</h3>
-            <p className="text-xs text-neutral-500">{t.contactPage.phoneSubtitle}</p>
+            <p className="text-xs text-neutral-500">{t.contactPage.phoneHours}</p>
             <div className="pt-2">
               <a href="tel:+48511660511" className="font-mono text-base font-bold text-[#1E3A2B] hover:text-[#C86D51]">
                 +48 511 660 511
@@ -78,9 +109,9 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
               <MapPin className="w-6 h-6" />
             </div>
             <h3 className="font-serif text-lg font-bold text-[#1E3A2B]">{t.contactPage.locationTitle}</h3>
-            <p className="text-xs text-neutral-500">{t.contactPage.locationSubtitle}</p>
+            <p className="text-xs text-neutral-500">{t.contactPage.locationRegion}</p>
             <div className="pt-2 text-xs font-semibold text-neutral-800">
-              ul. Graniczna 17, 34-335 Korbielów
+              {t.contactPage.address}
             </div>
           </div>
         </div>
@@ -113,14 +144,17 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
                   {t.contactPage.formSuccessDesc}
                 </p>
                 <button
-                  onClick={() => setIsSubmitted(false)}
+                  onClick={() => {
+                    setIsSubmitted(false);
+                    setSubmitError('');
+                  }}
                   className="mt-3 bg-[#1E3A2B] text-white px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer"
                 >
                   {t.contactPage.formSendAnother}
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4" aria-busy={isSubmitting}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
@@ -142,7 +176,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
                     <input
                       type="tel"
                       required
-                      placeholder="+48 600 000 000"
+                      placeholder={t.contactPage.phonePlaceholder}
                       value={formPhone}
                       onChange={(e) => setFormPhone(e.target.value)}
                       className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800"
@@ -158,7 +192,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
                     <input
                       type="email"
                       required
-                      placeholder="twoj@email.pl"
+                      placeholder={t.contactPage.emailPlaceholder}
                       value={formEmail}
                       onChange={(e) => setFormEmail(e.target.value)}
                       className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800"
@@ -192,10 +226,16 @@ export const ContactPage: React.FC<ContactPageProps> = ({ lang }) => {
                   />
                 </div>
 
+                {submitError && (
+                  <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800">
+                    {submitError}
+                  </p>
+                )}
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-[#1E3A2B] hover:bg-[#2A4F3B] disabled:opacity-50 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-colors flex items-center justify-center space-x-2 cursor-pointer"
+                  className="w-full bg-[#1E3A2B] hover:bg-[#2A4F3B] disabled:opacity-50 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-colors flex items-center justify-center space-x-2 disabled:cursor-not-allowed"
                 >
                   <Send className="w-4 h-4" />
                   <span>{isSubmitting ? t.contactPage.sending : t.contactPage.submitBtn}</span>

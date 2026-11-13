@@ -1,0 +1,35 @@
+{
+  "pages": {
+    "home": true,
+    "about": true,
+    "rooms": true,
+    "seasons": true,
+    "wellness": true,
+    "restaurant": true,
+    "packages": true,
+    "contact": true
+  },
+  "features": {
+    "reservations": true,
+    "promotions": true
+  },
+  "components": {
+    "header": true,
+    "announcementBar": true,
+    "homeHero": true,
+    "seasonalToggle": true,
+    "weatherTicker": true,
+    "bookingSearchBar": true,
+    "availabilityCalendar": true,
+    "promotionBanner": true,
+    "amenitiesStrip": true,
+    "homeAbout": true,
+    "featuredRooms": true,
+    "homeWellness": true,
+    "homeRestaurant": true,
+    "socialProof": true,
+    "aiConcierge": true,
+    "mobileActionBar": true,
+    "footer": true
+  }
+}

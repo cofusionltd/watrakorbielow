@@ -1,9 +1,10 @@
+import { CmsManagedImage } from '../components/CmsManagedImage';
 import React, { useState, useEffect } from 'react';
 import { Language, PackageOffer, PromotionalCampaign } from '../types';
-import { translations } from '../translations';
-import { PACKAGE_OFFERS } from '../data/resortData';
+import { getLocalizedPackages } from '../data/resortData';
 import { Gift, Tag, Sparkles, Check, Calendar, ArrowRight, Clock, Percent } from 'lucide-react';
 import { SocialShareBar } from '../components/SocialShareBar';
+import {useCms, useCmsTranslations} from '../context/CmsContext';
 
 interface PackagesPageProps {
   lang: Language;
@@ -16,20 +17,27 @@ export const PackagesPage: React.FC<PackagesPageProps> = ({
   onSelectPackage,
   onOpenBooking
 }) => {
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
+  const { siteSettings } = useCms();
+  const localizedPackages = getLocalizedPackages(lang);
   const [liveCampaigns, setLiveCampaigns] = useState<PromotionalCampaign[]>([]);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!siteSettings.features.promotions) {
+      setLiveCampaigns([]);
+      return;
+    }
     fetch('/api/campaigns')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setLiveCampaigns(data);
-        }
-      })
-      .catch(err => console.error('Error fetching live campaigns:', err));
-  }, []);
+    .then(res => {
+      if (!res.ok) throw new Error(`Campaign request failed (${res.status})`);
+      return res.json();
+    })
+    .then(data => {
+      if (Array.isArray(data)) setLiveCampaigns(data);
+    })
+    .catch(err => console.error('Error fetching live campaigns:', err));
+  }, [siteSettings.features.promotions]);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -55,7 +63,7 @@ export const PackagesPage: React.FC<PackagesPageProps> = ({
         </div>
 
         {/* SECTION 1: LIVE PROMOTIONAL CAMPAIGNS (FROM ADMIN PANEL) */}
-        {liveCampaigns.length > 0 && (
+        {siteSettings.features.promotions && liveCampaigns.length > 0 && (
           <div className="space-y-6">
             <div className="flex items-center space-x-2 border-b border-neutral-200 pb-3">
               <Sparkles className="w-5 h-5 text-[#D4A373]" />
@@ -73,7 +81,7 @@ export const PackagesPage: React.FC<PackagesPageProps> = ({
                   <div>
                     {/* Image Banner */}
                     <div className="relative h-48 overflow-hidden">
-                      <img
+                      <CmsManagedImage
                         src={camp.imageUrl}
                         alt={camp.title}
                         className="w-full h-full object-cover"
@@ -128,19 +136,19 @@ export const PackagesPage: React.FC<PackagesPageProps> = ({
                         ))}
                       </div>
                       {/* Social Share Bar */}
-                      <div className="pt-3 border-t border-neutral-100">
+                      {siteSettings.components.promotionBanner && <div className="pt-3 border-t border-neutral-100">
                         <SocialShareBar campaign={camp} variant="full" lang={lang} />
-                      </div>
+                      </div>}
                     </div>
                   </div>
 
                   <div className="p-6 pt-0">
-                    <button
+                    {siteSettings.features.reservations && <button
                       onClick={onOpenBooking}
                       className="w-full bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-colors cursor-pointer"
                     >
                       {t.packagesPage.bookWithDiscount}
-                    </button>
+                    </button>}
                   </div>
                 </div>
               ))}
@@ -158,14 +166,14 @@ export const PackagesPage: React.FC<PackagesPageProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {PACKAGE_OFFERS.map((pkg) => (
+            {localizedPackages.map((pkg) => (
               <div
                 key={pkg.id}
                 className="bg-white rounded-3xl overflow-hidden border border-neutral-200 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between group"
               >
                 <div>
                   <div className="relative h-52 overflow-hidden">
-                    <img
+                    <CmsManagedImage
                       src={pkg.image}
                       alt={pkg.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -208,7 +216,7 @@ export const PackagesPage: React.FC<PackagesPageProps> = ({
                       {pkg.price}
                     </span>
                   </div>
-                  <button
+                  {siteSettings.features.reservations && <button
                     onClick={() => {
                       onSelectPackage(pkg);
                       onOpenBooking();
@@ -216,7 +224,7 @@ export const PackagesPage: React.FC<PackagesPageProps> = ({
                     className="bg-[#1E3A2B] hover:bg-[#2A4F3B] text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
                   >
                     {t.packagesPage.selectPackage}
-                  </button>
+                  </button>}
                 </div>
               </div>
             ))}

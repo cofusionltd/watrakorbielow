@@ -1,7 +1,8 @@
+import { CmsManagedImage } from '../components/CmsManagedImage';
 import React, { useState } from 'react';
 import { Language } from '../types';
-import { translations } from '../translations';
 import { Snowflake, Sun, Mountain, Compass, Check, Calendar, ArrowRight, Shield } from 'lucide-react';
+import {useCms, useCmsTranslations} from '../context/CmsContext';
 
 interface SeasonsPageProps {
   lang: Language;
@@ -9,7 +10,8 @@ interface SeasonsPageProps {
 }
 
 export const SeasonsPage: React.FC<SeasonsPageProps> = ({ lang, onOpenBooking }) => {
-  const t = translations[lang];
+  const { siteSettings } = useCms();
+  const t = useCmsTranslations(lang);
   const [activeSeason, setActiveSeason] = useState<'winter' | 'summer'>('winter');
 
   return (
@@ -29,7 +31,7 @@ export const SeasonsPage: React.FC<SeasonsPageProps> = ({ lang, onOpenBooking })
           </p>
 
           {/* Large Season Switcher Toggle */}
-          <div className="inline-flex p-1.5 bg-white rounded-2xl border border-neutral-300 shadow-md">
+          {siteSettings.components.seasonalToggle && <div className="inline-flex p-1.5 bg-white rounded-2xl border border-neutral-300 shadow-md">
             <button
               onClick={() => setActiveSeason('winter')}
               className={`flex items-center space-x-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
@@ -52,7 +54,7 @@ export const SeasonsPage: React.FC<SeasonsPageProps> = ({ lang, onOpenBooking })
               <Sun className="w-4 h-4 text-amber-400" />
               <span>{t.seasonsPage.summerTabBtn}</span>
             </button>
-          </div>
+          </div>}
         </div>
 
         {/* WINTER TAB CONTENT */}
@@ -81,24 +83,24 @@ export const SeasonsPage: React.FC<SeasonsPageProps> = ({ lang, onOpenBooking })
                 </div>
 
                 <div className="pt-3">
-                  <button
+                  {siteSettings.features.reservations && <button
                     onClick={onOpenBooking}
                     className="bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider shadow-md transition-colors cursor-pointer"
                   >
                     {t.seasonsPage.bookWinterBtn}
-                  </button>
+                  </button>}
                 </div>
               </div>
 
               <div className="lg:col-span-6 grid grid-cols-2 gap-4">
                 <div className="col-span-2 rounded-2xl overflow-hidden shadow-md h-64">
-                  <img src="/images/image-13.jpg" alt="Pilsko narty" className="w-full h-full object-cover" />
+                  <CmsManagedImage src="/images/image-13.jpg" alt="Pilsko narty" className="w-full h-full object-cover" />
                 </div>
                 <div className="rounded-xl overflow-hidden shadow-sm h-36">
-                  <img src="/images/image-12.jpg" alt="Stok narciarski" className="w-full h-full object-cover" />
+                  <CmsManagedImage src="/images/image-12.jpg" alt="Stok narciarski" className="w-full h-full object-cover" />
                 </div>
                 <div className="rounded-xl overflow-hidden shadow-sm h-36">
-                  <img src="/images/image-15.jpg" alt="Zimowe stoki" className="w-full h-full object-cover" />
+                  <CmsManagedImage src="/images/image-15.jpg" alt="Zimowe stoki" className="w-full h-full object-cover" />
                 </div>
               </div>
             </div>
@@ -149,24 +151,24 @@ export const SeasonsPage: React.FC<SeasonsPageProps> = ({ lang, onOpenBooking })
                 </div>
 
                 <div className="pt-3">
-                  <button
+                  {siteSettings.features.reservations && <button
                     onClick={onOpenBooking}
                     className="bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider shadow-md transition-colors cursor-pointer"
                   >
                     {t.seasonsPage.bookSummerBtn}
-                  </button>
+                  </button>}
                 </div>
               </div>
 
               <div className="lg:col-span-6 grid grid-cols-2 gap-4">
                 <div className="col-span-2 rounded-2xl overflow-hidden shadow-md h-64">
-                  <img src="/images/image-08.jpg" alt="Letnie szlaki" className="w-full h-full object-cover" />
+                  <CmsManagedImage src="/images/image-08.jpg" alt="Letnie szlaki" className="w-full h-full object-cover" />
                 </div>
                 <div className="rounded-xl overflow-hidden shadow-sm h-36">
-                  <img src="/images/image-09.jpg" alt="Hala Miziowa widok" className="w-full h-full object-cover" />
+                  <CmsManagedImage src="/images/image-09.jpg" alt="Hala Miziowa widok" className="w-full h-full object-cover" />
                 </div>
                 <div className="rounded-xl overflow-hidden shadow-sm h-36">
-                  <img src="/images/image-10.jpg" alt="Górski krajobraz" className="w-full h-full object-cover" />
+                  <CmsManagedImage src="/images/image-10.jpg" alt="Górski krajobraz" className="w-full h-full object-cover" />
                 </div>
               </div>
             </div>

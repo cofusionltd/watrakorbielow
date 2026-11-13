@@ -1,3 +1,4 @@
+import { CmsManagedImage } from './CmsManagedImage';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
@@ -215,7 +216,7 @@ export const AvailabilityCalendarModal: React.FC<AvailabilityCalendarModalProps>
   lang,
   onSelectDatesAndBook
 }) => {
-  const { rooms } = useRooms();
+  const { rooms } = useRooms(lang);
   const tr = TRANSLATIONS[lang] || TRANSLATIONS.pl;
 
   const [selectedRoomId, setSelectedRoomId] = useState<string>('');
@@ -465,7 +466,7 @@ export const AvailabilityCalendarModal: React.FC<AvailabilityCalendarModalProps>
               className="w-full bg-[#1E3A2B] hover:bg-[#254836] border border-[#D4A373]/50 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between shadow-lg transition-all text-left cursor-pointer group"
             >
               <div className="flex items-center space-x-3.5 min-w-0">
-                <img
+                <CmsManagedImage
                   src={activeRoom.images?.[0] || '/images/image-10.jpg'}
                   alt={activeRoom.name}
                   className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border border-white/20 shrink-0 shadow-xs"
@@ -530,7 +531,7 @@ export const AvailabilityCalendarModal: React.FC<AvailabilityCalendarModalProps>
                         }`}
                       >
                         <div className="flex items-center space-x-3 min-w-0">
-                          <img
+                          <CmsManagedImage
                             src={room.images?.[0] || '/images/image-10.jpg'}
                             alt={room.name}
                             className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover border border-white/15 shrink-0 shadow-xs"

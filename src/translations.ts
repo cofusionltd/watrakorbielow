@@ -19,7 +19,10 @@ export const translations = {
       reviews: "Opinie",
       contact: "Kontakt",
       bookNow: "Rezerwuj Online",
-      callUs: "Zadzwoń do nas"
+      callUs: "Zadzwoń do nas",
+      mainNavigation: "Nawigacja główna",
+      languageSelector: "Wybierz język",
+      menuToggle: "Otwórz menu"
     },
     hero: {
       tag: "Beskid Żywiecki • Korbielów • U stóp Góry Pilsko",
@@ -235,7 +238,10 @@ export const translations = {
       reviews: "Reviews",
       contact: "Contact",
       bookNow: "Book Online",
-      callUs: "Call Us"
+      callUs: "Call Us",
+      mainNavigation: "Main navigation",
+      languageSelector: "Choose language",
+      menuToggle: "Open menu"
     },
     hero: {
       tag: "Beskid Mountains • Korbielów • At the Foot of Mount Pilsko",
@@ -451,7 +457,10 @@ export const translations = {
       reviews: "Recenzie",
       contact: "Kontakt",
       bookNow: "Rezervovať online",
-      callUs: "Zavolajte nám"
+      callUs: "Zavolajte nám",
+      mainNavigation: "Hlavná navigácia",
+      languageSelector: "Vybrať jazyk",
+      menuToggle: "Otvoriť menu"
     },
     hero: {
       tag: "Beskydy • Korbielów • Pri vrchu Pilsko & slovenských hraniciach",
@@ -667,7 +676,10 @@ export const translations = {
       reviews: "Bewertungen",
       contact: "Kontakt",
       bookNow: "Online Buchen",
-      callUs: "Rufen Sie uns an"
+      callUs: "Rufen Sie uns an",
+      mainNavigation: "Hauptnavigation",
+      languageSelector: "Sprache auswählen",
+      menuToggle: "Menü öffnen"
     },
     hero: {
       tag: "Beskiden • Korbielów • Am Fuße des Pilsko-Gipfels",

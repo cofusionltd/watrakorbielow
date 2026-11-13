@@ -375,6 +375,8 @@ export interface TreatmentItem {
 }
 
 export interface SiteCmsContent {
+  translationOverrides: Partial<Record<Language, Record<string, string>>>;
+  imageOverrides: Record<string, string>;
   resort: {
     name: string;
     tagline: string;

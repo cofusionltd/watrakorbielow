@@ -1,9 +1,10 @@
+import { CmsManagedImage } from './CmsManagedImage';
 import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, Compass, ChevronRight, Snowflake, Sun, Thermometer, Wind, Play, X, CalendarDays, CloudSun, Cloud, CloudRain, CloudLightning, Droplets, ChevronDown, Tag } from 'lucide-react';
 import { Language, BookingSearchQuery, WeatherData, PromotionalCampaign } from '../types';
-import { translations } from '../translations';
 import { BookingBar } from './BookingBar';
 import { SocialShareBar } from './SocialShareBar';
+import {useCms, useCmsTranslations} from '../context/CmsContext';
 
 interface HeroProps {
   lang: Language;
@@ -24,6 +25,7 @@ export const Hero: React.FC<HeroProps> = ({
   campaignsCount = 0,
   onNavigateToPackages
 }) => {
+  const { siteSettings } = useCms();
   const [activeSeasonView, setActiveSeasonView] = useState<'winter' | 'summer'>('winter');
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -32,7 +34,7 @@ export const Hero: React.FC<HeroProps> = ({
   const [isForecastOpen, setIsForecastOpen] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   // Prewarm YouTube embed connection when user hovers over the button or after mount
   const handlePrewarmVideo = () => {
@@ -136,7 +138,7 @@ export const Hero: React.FC<HeroProps> = ({
     <section id="hero-section" className="relative pt-6 pb-20 md:pb-28 overflow-hidden">
       {/* Background Image Container with Crossfade */}
       <div className="absolute inset-0 z-0">
-        <img
+        <CmsManagedImage
           src={heroImages[activeSeasonView]}
           alt={activeSeasonView === 'winter' ? 'Zimowy stok Korbielów' : 'Letni krajobraz Pilska'}
           className="w-full h-full object-cover object-center scale-105 transition-all duration-700 brightness-[0.78]"
@@ -150,7 +152,7 @@ export const Hero: React.FC<HeroProps> = ({
         {/* Top bar: Season view switcher & live weather ticker */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
           {/* Season View Toggle */}
-          <div className="inline-flex items-center bg-black/40 backdrop-blur-md p-1 rounded-full border border-white/15 text-xs text-white">
+          {siteSettings.components.seasonalToggle && <div className="inline-flex items-center bg-black/40 backdrop-blur-md p-1 rounded-full border border-white/15 text-xs text-white">
             <button
               onClick={() => setActiveSeasonView('winter')}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full transition-all cursor-pointer ${
@@ -173,10 +175,10 @@ export const Hero: React.FC<HeroProps> = ({
               <Sun className="w-3.5 h-3.5" />
               <span>{t.hero.summerMode}</span>
             </button>
-          </div>
+          </div>}
 
           {/* Mountain Weather Badge with Interactive Hover Pop-up for 7-Day Forecast */}
-          {weather && (
+          {siteSettings.components.weatherTicker && weather && (
             <div className="relative">
               <div
                 id="hero-weather-badge"
@@ -337,14 +339,14 @@ export const Hero: React.FC<HeroProps> = ({
           </p>
 
           <div className="flex flex-wrap items-center gap-4 pt-2">
-            <button
-              onClick={() => onOpenAvailabilityModal ? onOpenAvailabilityModal() : onOpenBooking()}
+            {siteSettings.features.reservations && <button
+              onClick={() => siteSettings.components.availabilityCalendar && onOpenAvailabilityModal ? onOpenAvailabilityModal() : onOpenBooking()}
               id="hero-availability-btn"
               className="bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-6 py-3.5 rounded-xl font-bold text-sm tracking-wide shadow-xl flex items-center space-x-2 transition-all transform active:scale-95 cursor-pointer uppercase"
             >
               <span>{t.hero.ctaAvailability}</span>
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </button>}
 
             <button
               onClick={handleOpenVideoModal}
@@ -364,16 +366,20 @@ export const Hero: React.FC<HeroProps> = ({
       </div>
 
       {/* Floating Booking Search Bar with Sprawdź Dostępność */}
-      <div className="mt-4 sm:mt-8">
+      {siteSettings.components.bookingSearchBar && siteSettings.features.reservations && <div className="mt-4 sm:mt-8">
         <BookingBar
           lang={lang}
           onSearch={onSearch}
-          onOpenAvailabilityModal={onOpenAvailabilityModal || onOpenBooking}
+          onOpenAvailabilityModal={
+            siteSettings.components.availabilityCalendar
+              ? onOpenAvailabilityModal || onOpenBooking
+              : onOpenBooking
+          }
         />
-      </div>
+      </div>}
 
       {/* Promotional Campaign Banner - Relocated below Sprawdź Dostępność buttons right above Reservation section */}
-      {activeCampaign && (
+      {siteSettings.features.promotions && siteSettings.components.promotionBanner && activeCampaign && (
         <div id="hero-promotional-banner" className="mt-4 max-w-6xl mx-auto px-4 sm:px-6">
           <div className="bg-[#14281E]/95 hover:bg-[#14281E] border border-[#D4A373]/50 backdrop-blur-md rounded-2xl sm:rounded-full px-4 py-2 sm:py-2 text-white shadow-xl transition-all flex flex-col sm:flex-row items-center justify-between gap-3">
             {/* Left Side: Badge + Title + Promo Code */}
@@ -394,7 +400,7 @@ export const Hero: React.FC<HeroProps> = ({
             {/* Right Side: Social Share + Actions */}
             <div className="flex items-center space-x-3 shrink-0 self-end sm:self-center">
               <SocialShareBar campaign={activeCampaign} variant="compact" />
-              {campaignsCount > 1 && onNavigateToPackages && (
+              {campaignsCount > 1 && siteSettings.pages.packages && onNavigateToPackages && (
                 <button
                   onClick={onNavigateToPackages}
                   className="text-xs text-white/80 hover:text-white underline decoration-white/40 cursor-pointer hidden sm:inline"
@@ -402,12 +408,12 @@ export const Hero: React.FC<HeroProps> = ({
                   {t.heroExtra?.allCampaigns ? t.heroExtra.allCampaigns(campaignsCount) : `Wszystkie (${campaignsCount})`}
                 </button>
               )}
-              <button
+              {siteSettings.features.reservations && <button
                 onClick={onOpenBooking}
                 className="bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] text-xs font-bold px-4 py-1.5 rounded-full transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95 shrink-0 uppercase tracking-wide"
               >
                 {t.heroExtra?.bookPromoBtn || 'Rezerwuj ze zniżką'}
-              </button>
+              </button>}
             </div>
           </div>
         </div>
@@ -453,7 +459,7 @@ export const Hero: React.FC<HeroProps> = ({
             {/* Fast-Loading YouTube Video Container (16:9 ratio, direct stream) */}
             <div className="relative w-full aspect-video bg-black flex items-center justify-center overflow-hidden">
               {/* Instant High-Res Poster Preview so user never sees black void */}
-              <img
+              <CmsManagedImage
                 src="/images/banner-1.jpg"
                 alt="Watra Resort Korbielów"
                 className="absolute inset-0 w-full h-full object-cover opacity-60 filter blur-[1px]"
@@ -484,7 +490,7 @@ export const Hero: React.FC<HeroProps> = ({
                 {t.heroExtra?.videoModalPerks || 'Pokoje • Stoki narciarskie • Restauracja • Jacuzzi pod gwiazdami'}
               </span>
               <div className="flex items-center space-x-3">
-                <button
+                {siteSettings.features.reservations && <button
                   onClick={() => {
                     setIsVideoModalOpen(false);
                     onOpenBooking();
@@ -492,7 +498,7 @@ export const Hero: React.FC<HeroProps> = ({
                   className="bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-md"
                 >
                   {t.common.bookStayDiscount}
-                </button>
+                </button>}
                 <button
                   onClick={() => setIsVideoModalOpen(false)}
                   className="text-white/60 hover:text-white text-xs px-3 py-2 cursor-pointer transition-colors"

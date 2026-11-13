@@ -1,8 +1,8 @@
+import { CmsManagedImage } from '../components/CmsManagedImage';
 import React from 'react';
 import { Language } from '../types';
-import { translations } from '../translations';
 import { UtensilsCrossed, Flame, Sparkles, Clock, Users, Wine, Calendar, Check, Tag } from 'lucide-react';
-import { useCms } from '../context/CmsContext';
+import {useCms, useCmsTranslations} from '../context/CmsContext';
 
 interface RestaurantPageProps {
   lang: Language;
@@ -10,7 +10,7 @@ interface RestaurantPageProps {
 }
 
 export const RestaurantPage: React.FC<RestaurantPageProps> = ({ lang, onOpenBooking }) => {
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
   const { content } = useCms();
   const restCms = content.restaurant;
 
@@ -94,13 +94,13 @@ export const RestaurantPage: React.FC<RestaurantPageProps> = ({ lang, onOpenBook
 
           <div className="lg:col-span-6 grid grid-cols-2 gap-4">
             <div className="rounded-2xl overflow-hidden shadow-md h-44">
-              <img src="/images/pork.jpg" alt="Pieczeń ze śliwką i beskidzkie wyroby" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+              <CmsManagedImage src="/images/pork.jpg" alt="Pieczeń ze śliwką i beskidzkie wyroby" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
             </div>
             <div className="rounded-2xl overflow-hidden shadow-md h-44">
-              <img src="/images/sausage.jpg" alt="Regionalne wędliny i swojskie specjały" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+              <CmsManagedImage src="/images/sausage.jpg" alt="Regionalne wędliny i swojskie specjały" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
             </div>
             <div className="col-span-2 rounded-2xl overflow-hidden shadow-md h-52">
-              <img src="/images/image-70.jpg" alt="Tradycyjna jadalnia Watra Korbielów" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+              <CmsManagedImage src="/images/image-70.jpg" alt="Tradycyjna jadalnia Watra Korbielów" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
             </div>
           </div>
         </div>
@@ -125,7 +125,7 @@ export const RestaurantPage: React.FC<RestaurantPageProps> = ({ lang, onOpenBook
             {showcaseItems.map((item, idx) => (
               <div key={idx} className="group rounded-2xl overflow-hidden bg-white border border-neutral-200 shadow-xs hover:shadow-md transition-all duration-300">
                 <div className="h-56 overflow-hidden">
-                  <img
+                  <CmsManagedImage
                     src={item.img}
                     alt={item.alt}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

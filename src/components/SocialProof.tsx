@@ -1,7 +1,7 @@
+import { useCmsTranslations } from '../context/CmsContext';
 import React from 'react';
 import { Star, MessageSquareQuote, ShieldCheck, CheckCircle, ExternalLink } from 'lucide-react';
 import { Language } from '../types';
-import { translations } from '../translations';
 import { RESORT_REVIEWS } from '../data/resortData';
 
 interface SocialProofProps {
@@ -9,7 +9,7 @@ interface SocialProofProps {
 }
 
 export const SocialProof: React.FC<SocialProofProps> = ({ lang }) => {
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   return (
     <section id="opinie" className="py-20 bg-[#F9F8F6] text-[#222222]">

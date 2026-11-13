@@ -1,8 +1,8 @@
+import { CmsManagedImage } from '../components/CmsManagedImage';
 import React from 'react';
 import { Language } from '../types';
-import { translations } from '../translations';
 import { MapPin, Mountain, Trees, Compass, CheckCircle2, Award, Calendar, Phone } from 'lucide-react';
-import { useCms } from '../context/CmsContext';
+import {useCms, useCmsTranslations} from '../context/CmsContext';
 
 interface AboutPageProps {
   lang: Language;
@@ -10,8 +10,8 @@ interface AboutPageProps {
 }
 
 export const AboutPage: React.FC<AboutPageProps> = ({ lang, onOpenBooking }) => {
-  const t = translations[lang];
-  const { content } = useCms();
+  const t = useCmsTranslations(lang);
+  const { content, siteSettings } = useCms();
   const aboutCms = content.about;
 
   const distances = (lang === 'pl' && aboutCms.distances && aboutCms.distances.length > 0)
@@ -79,7 +79,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ lang, onOpenBooking }) => 
           </div>
 
           <div className="lg:col-span-6 rounded-2xl overflow-hidden shadow-xl border-4 border-white h-[420px]">
-            <img
+            <CmsManagedImage
               src={(aboutCms as any).featuredImage || (aboutCms.images && aboutCms.images[0]) || '/images/image-13.jpg'}
               alt="Watra Korbielów w zimowej scenerii"
               className="w-full h-full object-cover"
@@ -128,12 +128,12 @@ export const AboutPage: React.FC<AboutPageProps> = ({ lang, onOpenBooking }) => 
                 {t.aboutPage.gallerySubtitle}
               </p>
             </div>
-            <button
+            {siteSettings.features.reservations && <button
               onClick={onOpenBooking}
               className="bg-[#1E3A2B] hover:bg-[#2A4F3B] text-white px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
             >
               {t.aboutPage.bookStayBtn}
-            </button>
+            </button>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -143,7 +143,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ lang, onOpenBooking }) => 
                 className="group rounded-2xl overflow-hidden bg-white border border-neutral-200 shadow-xs hover:shadow-md transition-all duration-300"
               >
                 <div className="h-56 overflow-hidden">
-                  <img
+                  <CmsManagedImage
                     src={img.url}
                     alt={img.caption}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

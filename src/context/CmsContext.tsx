@@ -1,9 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { SiteCmsContent } from '../types';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { Language, SiteCmsContent } from '../types';
 import { adminFetch } from '../lib/adminApi';
+import { DEFAULT_SITE_SETTINGS, SiteSettings } from '../siteSettings';
+import { translations } from '../translations';
 
 // Fallback initial state in case network takes time
 const initialCmsState: SiteCmsContent = {
+  translationOverrides: {},
+  imageOverrides: {},
   resort: {
     name: "Watra Korbielów",
     tagline: "Ośrodek • Restauracja • SPA",
@@ -195,8 +199,8 @@ const initialCmsState: SiteCmsContent = {
     jacuzziDescription: "Nasze zewnętrzne jacuzzi zostało wykonane z naturalnego drewna modrzewiowego. Zapewnia kąpiele pod gwiazdami w wodzie o temperaturze 38°C, nawet przy temperaturach -15°C i padającym śniegu. Zaawansowane dysze masują zmęczone mięśnie po nartach.",
     jacuzziTemp: "38°C",
     jacuzziHours: "16:00 – 22:00 codziennie",
-    saunaTitle: "Tradycyjna Sucha Sauna Fińska",
-    saunaDescription: "Sosnowa sauna fińska rozgrzewająca ciało do temperatury 85-95°C. Oczyszcza organizm z toksyn, poprawia krążenie i przyspiesza regenerację po wysiłku fizycznym na beskidzkich szlakach.",
+    saunaTitle: "Fitness i dobre samopoczucie",
+    saunaDescription: "Sala fitness z bieżnią i rowerkiem pozwala zadbać o kondycję, a strefa relaksu pomaga odzyskać siły po górskich aktywnościach.",
     saunaTemp: "85°C - 95°C",
     vipReservationNote: "Możliwość rezerwacji strefy jacuzzi na wyłączność na 60 minut z powitalną butelką schłodzonego wina musującego i paterą świeżych owoców.",
     pricingNote: "Wstęp do strefy wellness jest bezpłatny w wybranych pakietach lub dostępny za opłatą 40 zł/os. za seans.",
@@ -241,7 +245,53 @@ interface CmsContextType {
   refreshContent: () => Promise<void>;
   updateCmsContent: (updates: Partial<SiteCmsContent>) => Promise<{ success: boolean; message?: string }>;
   resetToDefaults: () => Promise<boolean>;
+  siteSettings: SiteSettings;
+  refreshSiteSettings: () => Promise<void>;
+  updateSiteSettings: (updates: Partial<SiteSettings>) => Promise<{ success: boolean; message?: string }>;
 }
+
+export const collectTranslatableStrings = (value: unknown, prefix = ''): Array<{ key: string; value: string }> => {
+  if (typeof value === 'string') return [{ key: prefix, value }];
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => collectTranslatableStrings(item, prefix ? `${prefix}.${index}` : String(index)));
+  }
+  if (value && typeof value === 'object') {
+    return Object.entries(value).flatMap(([key, child]) =>
+      collectTranslatableStrings(child, prefix ? `${prefix}.${key}` : key)
+    );
+  }
+  return [];
+};
+
+const cloneTranslationTree = <T,>(value: T): T => {
+  if (Array.isArray(value)) return value.map(cloneTranslationTree) as T;
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, cloneTranslationTree(child)])
+    ) as T;
+  }
+  return value;
+};
+
+const applyTranslationOverrides = <T,>(base: T, overrides: Record<string, string>): T => {
+  const result = cloneTranslationTree(base);
+  for (const [path, value] of Object.entries(overrides)) {
+    const segments = path.split('.');
+    let target: unknown = result;
+    for (const segment of segments.slice(0, -1)) {
+      if (!target || typeof target !== 'object' || !(segment in target)) {
+        target = undefined;
+        break;
+      }
+      target = (target as Record<string, unknown>)[segment];
+    }
+    const finalSegment = segments[segments.length - 1];
+    if (target && typeof target === 'object' && finalSegment in target && typeof (target as Record<string, unknown>)[finalSegment] === 'string') {
+      (target as Record<string, unknown>)[finalSegment] = value;
+    }
+  }
+  return result;
+};
 
 const CmsContext = createContext<CmsContextType>({
   content: initialCmsState,
@@ -249,11 +299,17 @@ const CmsContext = createContext<CmsContextType>({
   refreshContent: async () => {},
   updateCmsContent: async () => ({ success: false }),
   resetToDefaults: async () => false,
+  siteSettings: DEFAULT_SITE_SETTINGS,
+  refreshSiteSettings: async () => {},
+  updateSiteSettings: async () => ({ success: false }),
 });
+
+export const CMS_IMAGE_REMOVED = '__cms_image_removed__';
 
 export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [content, setContent] = useState<SiteCmsContent>(initialCmsState);
   const [loading, setLoading] = useState(true);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
 
   const fetchContent = async () => {
     try {
@@ -271,6 +327,24 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     fetchContent();
+  }, []);
+
+  const refreshSiteSettings = async () => {
+    try {
+      const res = await fetch('/api/site-settings');
+      if (!res.ok) {
+        throw new Error(`Site settings request failed (${res.status})`);
+      }
+      setSiteSettings(await res.json());
+    } catch (error) {
+      console.warn('Could not fetch site settings; using enabled defaults:', error);
+    }
+  };
+
+  useEffect(() => {
+    void refreshSiteSettings();
+    const intervalId = window.setInterval(() => void refreshSiteSettings(), 30_000);
+    return () => window.clearInterval(intervalId);
   }, []);
 
   const updateCmsContent = async (updates: Partial<SiteCmsContent>) => {
@@ -310,6 +384,27 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateSiteSettings = async (updates: Partial<SiteSettings>) => {
+    try {
+      const res = await adminFetch('/api/admin/site-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, message: data.error || 'Nie udało się zapisać ustawień.' };
+      }
+      setSiteSettings(data.settings);
+      return { success: true, message: 'Ustawienia zostały zapisane.' };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Błąd sieci podczas zapisywania ustawień.',
+      };
+    }
+  };
+
   return (
     <CmsContext.Provider
       value={{
@@ -318,6 +413,9 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshContent: fetchContent,
         updateCmsContent,
         resetToDefaults,
+        siteSettings,
+        refreshSiteSettings,
+        updateSiteSettings,
       }}
     >
       {children}
@@ -326,3 +424,16 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 };
 
 export const useCms = () => useContext(CmsContext);
+
+export const useCmsTranslations = (lang: Language) => {
+  const { content } = useCms();
+  return useMemo(
+    () => applyTranslationOverrides(translations[lang], content.translationOverrides?.[lang] || {}),
+    [lang, content.translationOverrides],
+  );
+};
+
+export const useCmsImage = (source: string) => {
+  const { content } = useCms();
+  return content.imageOverrides?.[source] ?? source;
+};

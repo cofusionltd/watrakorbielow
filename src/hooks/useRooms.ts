@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Room } from '../types';
-import { RESORT_ROOMS } from '../data/resortData';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Language, Room } from '../types';
+import { getLocalizedRooms, RESORT_ROOMS } from '../data/resortData';
 
 let cachedRooms: Room[] | null = null;
 
-export const useRooms = () => {
-  const [rooms, setRooms] = useState<Room[]>(cachedRooms || RESORT_ROOMS);
+export const useRooms = (lang: Language = 'pl') => {
+  const [rawRooms, setRawRooms] = useState<Room[]>(cachedRooms || RESORT_ROOMS);
   const [isLoading, setIsLoading] = useState<boolean>(!cachedRooms);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +16,7 @@ export const useRooms = () => {
         const data: Room[] = await res.json();
         if (Array.isArray(data) && data.length > 0) {
           cachedRooms = data;
-          setRooms(data);
+          setRawRooms(data);
         }
       }
     } catch (err: any) {
@@ -37,6 +37,8 @@ export const useRooms = () => {
     window.addEventListener('rooms_updated', handleRoomsUpdate);
     return () => window.removeEventListener('rooms_updated', handleRoomsUpdate);
   }, [fetchRooms]);
+
+  const rooms = useMemo(() => getLocalizedRooms(lang, rawRooms), [lang, rawRooms]);
 
   return { rooms, isLoading, error, refetch: fetchRooms };
 };

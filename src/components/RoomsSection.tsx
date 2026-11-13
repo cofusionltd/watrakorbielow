@@ -1,7 +1,8 @@
+import { CmsManagedImage } from './CmsManagedImage';
+import { useCmsTranslations } from '../context/CmsContext';
 import React, { useState } from 'react';
 import { Bed, Users, Maximize2, Coffee, Check, ChevronRight, Eye, Sparkles, Star } from 'lucide-react';
 import { Language, Room } from '../types';
-import { translations } from '../translations';
 import { useRooms } from '../hooks/useRooms';
 
 interface RoomsSectionProps {
@@ -10,12 +11,12 @@ interface RoomsSectionProps {
 }
 
 export const RoomsSection: React.FC<RoomsSectionProps> = ({ lang, onSelectRoom }) => {
-  const { rooms } = useRooms();
+  const { rooms } = useRooms(lang);
   const [activeCategory, setActiveCategory] = useState<'all' | 'double' | 'family' | 'suite'>('all');
   const [galleryModalRoom, setGalleryModalRoom] = useState<Room | null>(null);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number>(0);
 
-  const t = translations[lang];
+  const t = useCmsTranslations(lang);
 
   const filteredRooms = activeCategory === 'all' 
     ? rooms 
@@ -94,7 +95,7 @@ export const RoomsSection: React.FC<RoomsSectionProps> = ({ lang, onSelectRoom }
             >
               {/* Image Container with Hover Gallery Trigger */}
               <div className="relative h-56 overflow-hidden">
-                <img
+                <CmsManagedImage
                   src={room.images[0]}
                   alt={room.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -225,7 +226,7 @@ export const RoomsSection: React.FC<RoomsSectionProps> = ({ lang, onSelectRoom }
             </div>
 
             <div className="my-4 h-72 sm:h-96 rounded-xl overflow-hidden bg-black/50">
-              <img
+              <CmsManagedImage
                 src={galleryModalRoom.images[selectedPhotoIndex]}
                 alt="Room detail"
                 className="w-full h-full object-cover"
@@ -242,7 +243,7 @@ export const RoomsSection: React.FC<RoomsSectionProps> = ({ lang, onSelectRoom }
                     selectedPhotoIndex === i ? 'border-[#D4A373] scale-105' : 'border-transparent opacity-60'
                   }`}
                 >
-                  <img src={img} alt="thumb" className="w-full h-full object-cover" />
+                  <CmsManagedImage src={img} alt="thumb" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

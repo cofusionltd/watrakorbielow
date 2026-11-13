@@ -15,6 +15,7 @@ import {
   UtensilsCrossed 
 } from 'lucide-react';
 import { ChatMessage, Language } from '../types';
+import { useCms } from '../context/CmsContext';
 
 interface AiChatConciergeProps {
   currentLang?: Language;
@@ -22,6 +23,7 @@ interface AiChatConciergeProps {
 }
 
 export const AiChatConcierge: React.FC<AiChatConciergeProps> = ({ currentLang = 'pl', onOpenBooking }) => {
+  const { siteSettings } = useCms();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -308,12 +310,12 @@ export const AiChatConcierge: React.FC<AiChatConciergeProps> = ({ currentLang = 
                 <span>Zadaj pytanie o resort, stoki narciarskie lub rezerwację</span>
               </div>
 
-              <button
+              {siteSettings.features.reservations && siteSettings.features.promotions && <button
                 onClick={onOpenBooking}
                 className="bg-[#1E3A2B] hover:bg-[#2A4F3B] text-[#D4A373] px-2 py-0.5 rounded-md font-bold text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
               >
                 Rabat -10%
-              </button>
+              </button>}
             </div>
           )}
 
@@ -438,7 +440,7 @@ export const AiChatConcierge: React.FC<AiChatConciergeProps> = ({ currentLang = 
                         {/* Interactive Contextual Action Chips */}
                         {(hasBookingMention || hasPhoneMention || hasMenuMention) && (
                           <div className="mt-3 pt-2 border-t border-neutral-100 flex flex-wrap gap-1.5">
-                            {hasBookingMention && (
+                            {hasBookingMention && siteSettings.features.reservations && (
                               <button
                                 onClick={onOpenBooking}
                                 className="inline-flex items-center space-x-1.5 bg-[#1E3A2B] text-[#D4A373] hover:bg-[#2A4F3B] px-2.5 py-1 rounded-lg text-[10.5px] font-bold shadow-2xs transition-colors cursor-pointer"

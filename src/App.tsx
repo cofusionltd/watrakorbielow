@@ -22,9 +22,8 @@ import { AdminPage } from './pages/AdminPage';
 
 import { Language, BookingSearchQuery, PackageOffer, PageView } from './types';
 import { Phone, Calendar } from 'lucide-react';
-import { CmsProvider } from './context/CmsContext';
+import { CmsProvider, useCms, useCmsTranslations } from './context/CmsContext';
 import { motion } from 'motion/react';
-import { translations } from './translations';
 
 const PAGE_HASH_MAP: Record<string, PageView> = {
   '': 'home',
@@ -53,23 +52,38 @@ const HASH_FOR_PAGE: Record<PageView, string> = {
   admin: '#/admin',
 };
 
-export default function App() {
+const AppContent: React.FC = () => {
+  const { siteSettings } = useCms();
   const [lang, setLang] = useState<Language>('pl');
+  const t = useCmsTranslations(lang);
   const [currentPage, setCurrentPage] = useState<PageView>('home');
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingQuery, setBookingQuery] = useState<BookingSearchQuery | undefined>(undefined);
   const [preselectedRoomId, setPreselectedRoomId] = useState<string | undefined>(undefined);
   const [selectedPackage, setSelectedPackage] = useState<PackageOffer | null>(null);
 
+  useEffect(() => {
+    if (!siteSettings.features.reservations) {
+      setIsBookingModalOpen(false);
+    }
+  }, [siteSettings.features.reservations]);
+
   // Initialize and listen to hash routing
   useEffect(() => {
+    const enabledPages = (Object.keys(siteSettings.pages) as Array<Exclude<PageView, 'admin'>>)
+      .filter((page) => siteSettings.pages[page]);
+    const fallbackPage = enabledPages.includes('home') ? 'home' : enabledPages[0];
     const handleHashChange = () => {
       const hash = window.location.hash;
       const page = PAGE_HASH_MAP[hash];
-      if (page) {
+      if (page === 'admin') {
+        setCurrentPage('admin');
+      } else if (page && siteSettings.pages[page]) {
         setCurrentPage(page);
+      } else if (fallbackPage) {
+        setCurrentPage(fallbackPage);
+        window.location.hash = HASH_FOR_PAGE[fallbackPage];
       } else if (hash && hash !== '#') {
-        // Fallback for unknown hash routes
         setCurrentPage('home');
       }
     };
@@ -77,21 +91,30 @@ export default function App() {
     handleHashChange();
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [siteSettings.pages]);
 
   const navigateTo = (page: PageView) => {
-    setCurrentPage(page);
-    window.location.hash = HASH_FOR_PAGE[page];
+    const enabledPages = (Object.keys(siteSettings.pages) as Array<Exclude<PageView, 'admin'>>)
+      .filter((publicPage) => siteSettings.pages[publicPage]);
+    const targetPage: PageView = page === 'admin'
+      ? 'admin'
+      : siteSettings.pages[page]
+        ? page
+        : enabledPages.includes('home') ? 'home' : enabledPages[0] || 'home';
+    setCurrentPage(targetPage);
+    window.location.hash = HASH_FOR_PAGE[targetPage];
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleOpenBooking = (roomId?: string) => {
+    if (!siteSettings.features.reservations) return;
     setSelectedPackage(null);
     setPreselectedRoomId(roomId);
     setIsBookingModalOpen(true);
   };
 
   const handleSearchFromBar = (query: BookingSearchQuery) => {
+    if (!siteSettings.features.reservations) return;
     setBookingQuery(query);
     setPreselectedRoomId(query.roomType === 'all' ? undefined : query.roomType);
     setSelectedPackage(null);
@@ -99,28 +122,33 @@ export default function App() {
   };
 
   const handleSelectPackage = (pkg: PackageOffer) => {
+    if (!siteSettings.features.reservations) return;
     setSelectedPackage(pkg);
     setIsBookingModalOpen(true);
   };
 
   return (
-    <CmsProvider>
       <div className="min-h-screen flex flex-col bg-[#F9F8F6] text-[#222222] font-sans antialiased selection:bg-[#D4A373]/30 selection:text-[#1E3A2B]">
       {/* Sticky Header with Multi-Page Navigation & Language Switcher */}
-      <Header
+      {siteSettings.components.header && <Header
         lang={lang}
         currentPage={currentPage}
         onNavigate={navigateTo}
         onLanguageChange={setLang}
         onOpenBooking={() => handleOpenBooking()}
-      />
+      />}
 
       {/* Real-time Visitor Telemetry Tracker */}
       <AnalyticsTracker currentPage={currentPage} />
 
       {/* Main Multi-Page Routed View */}
       <main className="flex-grow">
-        {currentPage === 'home' && (
+        {currentPage !== 'admin' && !Object.values(siteSettings.pages).some(Boolean) && (
+          <div className="mx-auto max-w-3xl px-6 py-24 text-center text-neutral-700">
+            <h1 className="font-serif text-2xl font-bold">Strona jest obecnie niedostępna</h1>
+          </div>
+        )}
+        {currentPage === 'home' && siteSettings.pages.home && (
           <HomePage
             lang={lang}
             onNavigate={navigateTo}
@@ -130,42 +158,42 @@ export default function App() {
           />
         )}
 
-        {currentPage === 'about' && (
+        {currentPage === 'about' && siteSettings.pages.about && (
           <AboutPage
             lang={lang}
             onOpenBooking={() => handleOpenBooking()}
           />
         )}
 
-        {currentPage === 'rooms' && (
+        {currentPage === 'rooms' && siteSettings.pages.rooms && (
           <RoomsPage
             lang={lang}
             onSelectRoom={(roomId) => handleOpenBooking(roomId)}
           />
         )}
 
-        {currentPage === 'seasons' && (
+        {currentPage === 'seasons' && siteSettings.pages.seasons && (
           <SeasonsPage
             lang={lang}
             onOpenBooking={() => handleOpenBooking()}
           />
         )}
 
-        {currentPage === 'wellness' && (
+        {currentPage === 'wellness' && siteSettings.pages.wellness && (
           <WellnessPage
             lang={lang}
             onOpenBooking={() => handleOpenBooking()}
           />
         )}
 
-        {currentPage === 'restaurant' && (
+        {currentPage === 'restaurant' && siteSettings.pages.restaurant && (
           <RestaurantPage
             lang={lang}
             onOpenBooking={() => handleOpenBooking()}
           />
         )}
 
-        {currentPage === 'packages' && (
+        {currentPage === 'packages' && siteSettings.pages.packages && (
           <PackagesPage
             lang={lang}
             onSelectPackage={handleSelectPackage}
@@ -173,7 +201,7 @@ export default function App() {
           />
         )}
 
-        {currentPage === 'contact' && (
+        {currentPage === 'contact' && siteSettings.pages.contact && (
           <ContactPage
             lang={lang}
           />
@@ -185,17 +213,19 @@ export default function App() {
       </main>
 
       {/* Global Multilingual AI Chat Concierge with Auto Language Detection (PL, EN, SK, DE) */}
-      <AiChatConcierge currentLang={lang} onOpenBooking={() => handleOpenBooking()} />
+      {siteSettings.components.aiConcierge && (
+        <AiChatConcierge currentLang={lang} onOpenBooking={() => handleOpenBooking()} />
+      )}
 
       {/* Comprehensive Footer with Multi-Page Navigation */}
-      <Footer
+      {siteSettings.components.footer && <Footer
         lang={lang}
         onNavigate={navigateTo}
         onOpenBooking={() => handleOpenBooking()}
-      />
+      />}
 
       {/* Floating Bottom Action Bar on Mobile Viewports with subtle slide-in animation */}
-      <motion.div 
+      {siteSettings.components.mobileActionBar && <motion.div
         id="mobile-bottom-quick-action" 
         initial={{ y: 80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -209,25 +239,32 @@ export default function App() {
           <Phone className="w-3.5 h-3.5 text-[#D4A373]" />
           <span>+48 511 660 511</span>
         </a>
-        <button
+        {siteSettings.features.reservations && <button
           onClick={() => handleOpenBooking()}
           className="flex-1 bg-[#D4A373] hover:bg-[#c89260] active:scale-95 text-[#14281E] py-2.5 px-3 rounded-xl flex items-center justify-center space-x-1.5 text-xs font-bold shadow-md cursor-pointer transition-all"
         >
           <Calendar className="w-3.5 h-3.5" />
-          <span>{translations[lang].homePage.roomsReserveCta}</span>
-        </button>
-      </motion.div>
+          <span>{t.homePage.roomsReserveCta}</span>
+        </button>}
+      </motion.div>}
 
       {/* Interactive Reservation Modal with 10% Direct Booking Discount */}
-      <BookingModal
+      {siteSettings.features.reservations && <BookingModal
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
         lang={lang}
         initialQuery={bookingQuery}
         selectedPackage={selectedPackage}
         preselectedRoomId={preselectedRoomId}
-      />
+      />}
     </div>
+  );
+};
+
+export default function App() {
+  return (
+    <CmsProvider>
+      <AppContent />
     </CmsProvider>
   );
 }

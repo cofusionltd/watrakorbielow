@@ -63,10 +63,13 @@ export interface PageTranslations {
     formSuccessTitle: string;
     formSuccessDesc: string;
     formSendAnother: string;
+    submitError: string;
     nameLabel: string;
     namePlaceholder: string;
     phoneLabel: string;
+    phonePlaceholder: string;
     emailLabel: string;
+    emailPlaceholder: string;
     datesLabel: string;
     datesPlaceholder: string;
     messageLabel: string;
@@ -129,6 +132,9 @@ export interface PageTranslations {
     inputEmptyError: string;
     calculateError: string;
     myLocation: string;
+    mapTitle: string;
+    resortName: string;
+    nearbyLandmarks: string;
   };
   socialShare: {
     sharePrompt: string;
@@ -229,6 +235,7 @@ export interface PageTranslations {
     saunaHeading: string;
     saunaLead: string;
     saunaPoints: string[];
+    activities: Array<{ title: string; description: string }>;
     hoursTitle: string;
     hoursDesc: string;
     safetyTitle: string;
@@ -293,6 +300,8 @@ export interface PageTranslations {
     videoLoading: string;
   };
   footerExtra: {
+    brandDescriptor: string;
+    aboutSnippet: string;
     directGuarantee: string;
     depositNote: string;
     pagesTitle: string;
@@ -411,13 +420,16 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       address: "ul. Graniczna 17, 34-335 Korbielów",
       formTitle: "Wyślij Zapytanie do Recepcji",
       formSubtitle: "Wypełnij formularz – skontaktujemy się z Tobą w sprawie dostępności pokoi, imprez okolicznościowych lub pobytów grupowych.",
-      formSuccessTitle: "Wiadomość została wysłana!",
-      formSuccessDesc: "Dziękujemy za kontakt. Nasz personel recepcji odezwie się do Ciebie pod wskazany numer lub adres e-mail.",
+      formSuccessTitle: "Zapytanie zostało przyjęte",
+      formSuccessDesc: "Dziękujemy za kontakt. Zapytanie zapisano i jest dostępne dla recepcji w panelu gości.",
       formSendAnother: "Wyślij kolejne zapytanie",
+      submitError: "Nie udało się wysłać zapytania. Spróbuj ponownie później lub skontaktuj się z nami telefonicznie.",
       nameLabel: "Imię i Nazwisko *",
       namePlaceholder: "np. Jan Kowalski",
       phoneLabel: "Numer Telefonu *",
+      phonePlaceholder: "+48 600 000 000",
       emailLabel: "Adres E-mail *",
+      emailPlaceholder: "twoj@email.pl",
       datesLabel: "Planowany Termin (opcjonalnie)",
       datesPlaceholder: "np. 15-20 lutego (4 osoby)",
       messageLabel: "Treść Wiadomości / Pytanie *",
@@ -479,7 +491,10 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       geoGenericError: "Błąd pobierania pozycji GPS.",
       inputEmptyError: "Wpisz miasto lub adres startowy (np. Katowice, Kraków, Żywiec, Soblówka).",
       calculateError: "Nie udało się obliczyć trasy. Sprawdź poprawność wpisanego adresu.",
-      myLocation: "Moja lokalizacja"
+      myLocation: "Moja lokalizacja",
+      mapTitle: "Mapa Google Maps — Watra Korbielów",
+      resortName: "Ośrodek Watra Korbielów",
+      nearbyLandmarks: "100 m do wyciągu Cypisek • Pilsko: 1557 m n.p.m."
     },
     socialShare: {
       sharePrompt: "Podziel się tą promocją ze znajomymi:",
@@ -601,13 +616,20 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
         "Nastrojowe oświetlenie ledowe i widok na las świerkowy"
       ],
       bookJacuzziBtn: "Rezerwuj pobyt z jacuzzi",
-      saunaBadge: "Sauna Sucha Fińska",
-      saunaHeading: "Tradycyjna Sucha Sauna Fińska",
-      saunaLead: "Tradycyjna sauna fińska wykończona naturalnym drewnem świerkowym. Doskonała po całym dniu spędzonym na stoku narciarskim lub wielogodzinnej wędrówce po szczytach Beskidów. Wspomaga odporność, przyspiesza regenerację mięśni i oczyszcza organizm.",
+      saunaBadge: "Aktywność • Regeneracja • Dobre samopoczucie",
+      saunaHeading: "Fitness i dobre samopoczucie",
+      saunaLead: "Sala fitness z bieżnią i rowerkiem pozwala zadbać o kondycję, a strefa relaksu pomaga odzyskać siły po górskich aktywnościach.",
       saunaPoints: [
-        "Temperatura: 85°C – 95°C z możliwością aromaterapii olejkami",
-        "Strefa pryszniców schładzających i leżaki wypoczynkowe",
-        "Ręczniki i prześcieradła saunowe dostępne w cenie"
+        "Aromaterapia olejkami, prysznice schładzające i wygodne leżaki",
+        "Ręczniki oraz prześcieradła saunowe w cenie"
+      ],
+      activities: [
+        { title: "Grota Solna", description: "Naturalna sól tworzy nadmorski mikroklimat sprzyjający oddychaniu i relaksowi na leżakach." },
+        { title: "Tradycyjna Sucha Sauna Fińska", description: "Sosnowa sauna 85–95°C wspiera krążenie i regenerację; aromaterapia, prysznice, leżaki i tekstylia w cenie." },
+        { title: "Sala Fitness", description: "Bieżnia i rowerek pozwalają trenować niezależnie od pogody." },
+        { title: "Balia Relaksacyjna", description: "Ciepła kąpiel w drewnianej balii rozluźnia mięśnie po górskich wędrówkach." },
+        { title: "Balia / Strefa Schładzania", description: "Zimna kąpiel po saunie pobudza krążenie i dodaje energii." },
+        { title: "Kącik Wypoczynkowy", description: "Wiklinowe fotele i górska fototapeta tworzą miejsce na wyciszenie i odpoczynek." }
       ],
       hoursTitle: "Godziny Otwarcia",
       hoursDesc: "Strefa wellness czynna codziennie w godzinach 16:00 – 22:00. Na życzenie możliwe wcześniejsze uruchomienie.",
@@ -678,6 +700,8 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       videoLoading: "Ładowanie wideo resortu..."
     },
     footerExtra: {
+      brandDescriptor: "Ośrodek • Restauracja",
+      aboutSnippet: "Watra Korbielów to całoroczny resort górski położony w Beskidzie Żywieckim u stóp Pilska (1557 m n.p.m.). Oferujemy 100 m do wyciągów narciarskich, gorące jacuzzi pod gwiazdami, tradycyjną karczmę beskidzką i komfortowe noclegi z 10% rabatem bezpośrednim.",
       directGuarantee: "Gwarancja rezerwacji bezpośredniej: -10% i darmowy parking",
       depositNote: "W tytule prosimy wpisać nazwisko oraz termin rezerwacji.",
       pagesTitle: "Strony & Sekcje",
@@ -789,18 +813,21 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       emailDesc: "We reply as promptly as possible",
       emailSubtitle: "We reply as promptly as possible",
       locationTitle: "Resort Location",
-      locationRegion: "Beskid Żywiecki • Poland",
-      locationSubtitle: "Beskid Żywiecki • Poland",
-      address: "ul. Graniczna 17, 34-335 Korbielów",
+      locationRegion: "Żywiec Beskids • Poland",
+      locationSubtitle: "Żywiec Beskids • Poland",
+      address: "17 Graniczna Street, 34-335 Korbielów",
       formTitle: "Send an Inquiry to Reception",
       formSubtitle: "Fill out the form – we will get back to you regarding room availability, group stays, or family celebrations.",
-      formSuccessTitle: "Message has been sent!",
-      formSuccessDesc: "Thank you for contacting us. Our reception team will reach out to you shortly via phone or email.",
+      formSuccessTitle: "Inquiry received",
+      formSuccessDesc: "Thank you for contacting us. Your inquiry has been saved and is available to reception in guest management.",
       formSendAnother: "Send another inquiry",
+      submitError: "We couldn't submit your inquiry. Please try again later or contact us by phone.",
       nameLabel: "Full Name *",
       namePlaceholder: "e.g. John Smith",
       phoneLabel: "Phone Number *",
+      phonePlaceholder: "+48 600 000 000",
       emailLabel: "Email Address *",
+      emailPlaceholder: "you@example.com",
       datesLabel: "Planned Dates (optional)",
       datesPlaceholder: "e.g. Feb 15-20 (4 guests)",
       messageLabel: "Message / Question *",
@@ -862,7 +889,10 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       geoGenericError: "Error retrieving GPS coordinates.",
       inputEmptyError: "Please enter a starting city or address.",
       calculateError: "Could not calculate route. Please verify the entered address.",
-      myLocation: "My Location"
+      myLocation: "My Location",
+      mapTitle: "Google Maps — Watra Korbielów",
+      resortName: "Watra Korbielów Resort",
+      nearbyLandmarks: "100 m to Cypisek ski lift • Pilsko: 1,557 m above sea level"
     },
     socialShare: {
       sharePrompt: "Share this offer with friends:",
@@ -984,13 +1014,20 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
         "Ambient LED lighting with peaceful pine forest views"
       ],
       bookJacuzziBtn: "Book stay with jacuzzi",
-      saunaBadge: "Dry Finnish Sauna",
-      saunaHeading: "Traditional Finnish Sauna",
-      saunaLead: "Finished in natural spruce wood, our sauna is the perfect antidote to tired muscles after skiing or long hikes. Boosts immunity, stimulates recovery, and leaves you thoroughly refreshed.",
+      saunaBadge: "Activity • Recovery • Wellbeing",
+      saunaHeading: "Fitness & Wellbeing",
+      saunaLead: "A treadmill and exercise bike support your fitness, while the relaxation area helps you recharge after mountain activities.",
       saunaPoints: [
-        "Temperature: 85°C – 95°C with natural herbal aromatherapy",
-        "Cooling shower zone and comfortable wooden loungers",
-        "Sauna towels and sheets complimentary"
+        "Oil aromatherapy, cooling showers and comfortable loungers",
+        "Sauna towels and sheets included"
+      ],
+      activities: [
+        { title: "Salt Cave", description: "Natural salt creates a seaside-like microclimate for easier breathing and restful lounging." },
+        { title: "Traditional Finnish Sauna", description: "Pine sauna at 85–95°C supports circulation and recovery; aromatherapy, showers, loungers and linens included." },
+        { title: "Fitness Room", description: "A treadmill and exercise bike make it easy to stay active in any weather." },
+        { title: "Relaxation Tub", description: "A warm wooden tub helps ease tired muscles after mountain hikes." },
+        { title: "Cold Plunge", description: "A refreshing cold bath after sauna stimulates circulation and restores energy." },
+        { title: "Relaxation Corner", description: "Wicker chairs and a mountain mural make a cozy spot to unwind." }
       ],
       hoursTitle: "Opening Hours",
       hoursDesc: "Wellness zone is open daily from 4:00 PM to 10:00 PM. Earlier activation available upon request.",
@@ -1061,6 +1098,8 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       videoLoading: "Loading resort video..."
     },
     footerExtra: {
+      brandDescriptor: "Resort • Restaurant",
+      aboutSnippet: "Watra Korbielów is a year-round mountain resort in the Żywiec Beskids, at the foot of Mount Pilsko (1,557 m). Enjoy ski lifts just 100 m away, a hot tub under the stars, traditional highlander cuisine, and comfortable accommodation with a 10% direct-booking discount.",
       directGuarantee: "Direct booking guarantee: -10% discount & free parking",
       depositNote: "Please include your surname and stay dates in the bank transfer reference.",
       pagesTitle: "Pages & Sections",
@@ -1172,18 +1211,21 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       emailDesc: "Odpovedáme čo najrýchlejšie",
       emailSubtitle: "Odpovedáme čo najrýchlejšie",
       locationTitle: "Lokalita strediska",
-      locationRegion: "Beskid Żywiecki • Poľsko",
-      locationSubtitle: "Beskid Żywiecki • Poľsko",
-      address: "ul. Graniczna 17, 34-335 Korbielów",
+      locationRegion: "Žywiecke Beskydy • Poľsko",
+      locationSubtitle: "Žywiecke Beskydy • Poľsko",
+      address: "Graniczna 17, 34-335 Korbielów",
       formTitle: "Odoslať dopyt na recepciu",
       formSubtitle: "Vyplňte formulár – ozveme sa vám ohľadom dostupnosti izieb, rodinných osláv alebo skupinových pobytov.",
-      formSuccessTitle: "Správa bola odoslaná!",
-      formSuccessDesc: "Ďakujeme za kontakt. Personál našej recepcie sa vám čoskoro ozve na uvedené telefónne číslo alebo e-mail.",
+      formSuccessTitle: "Dopyt bol prijatý",
+      formSuccessDesc: "Ďakujeme za kontakt. Váš dopyt bol uložený a recepcia ho nájde v správe hostí.",
       formSendAnother: "Odoslať ďalší dopyt",
+      submitError: "Dopyt sa nepodarilo odoslať. Skúste to neskôr alebo nás kontaktujte telefonicky.",
       nameLabel: "Meno a priezvisko *",
       namePlaceholder: "napr. Ján Novák",
       phoneLabel: "Telefónne číslo *",
+      phonePlaceholder: "+48 600 000 000",
       emailLabel: "E-mailová adresa *",
+      emailPlaceholder: "vas@email.sk",
       datesLabel: "Plánovaný termín (voliteľné)",
       datesPlaceholder: "napr. 15.–20. februára (4 osoby)",
       messageLabel: "Správa / Otázka *",
@@ -1245,7 +1287,10 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       geoGenericError: "Chyba pri získavaní GPS polohy.",
       inputEmptyError: "Zadajte východiskové mesto alebo adresu.",
       calculateError: "Nepodarilo sa vypočítať trasu. Skontrolujte zadanú adresu.",
-      myLocation: "Moja poloha"
+      myLocation: "Moja poloha",
+      mapTitle: "Google Maps — Watra Korbielów",
+      resortName: "Rezort Watra Korbielów",
+      nearbyLandmarks: "100 m k vleku Cypisek • Pilsko: 1 557 m n. m."
     },
     socialShare: {
       sharePrompt: "Zdieľajte túto zľavu s priateľmi:",
@@ -1367,13 +1412,20 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
         "Atmosférické LED osvetlenie s výhľadom na les"
       ],
       bookJacuzziBtn: "Rezervovať pobyt s vírivkou",
-      saunaBadge: "Suchá fínska sauna",
-      saunaHeading: "Tradičná suchá fínska sauna",
-      saunaLead: "Vyrobená z prírodného smrekového dreva. Vynikajúca po celom dni na lyžiach alebo turistike po hrebeňoch Beskýd. Posilňuje imunitu a urýchľuje regeneráciu svalov.",
+      saunaBadge: "Pohyb • Regenerácia • Pohoda",
+      saunaHeading: "Fitness a pohoda",
+      saunaLead: "Bežecký pás a rotoped podporia kondíciu, oddychová zóna zas načerpá energiu po horských aktivitách.",
       saunaPoints: [
-        "Teplota: 85°C – 95°C s možnosťou aromaterapie",
-        "Ochladzovacia sprcha a relaxačné ležadlá",
+        "Aromaterapia, ochladzovacia sprcha a pohodlné ležadlá",
         "Saunové plachty a uteráky v cene"
+      ],
+      activities: [
+        { title: "Soľná jaskyňa", description: "Prírodná soľ vytvára prímorskú mikroklímu vhodnú na dýchanie aj odpočinok." },
+        { title: "Tradičná fínska sauna", description: "Sosnová sauna 85–95°C podporuje regeneráciu; aromaterapia, sprcha, ležadlá a textílie v cene." },
+        { title: "Fitness miestnosť", description: "Bežecký pás a rotoped umožňujú cvičiť za každého počasia." },
+        { title: "Relaxačná kaďa", description: "Teplý kúpeľ v drevenej kadi uvoľní svaly po horskej túre." },
+        { title: "Ochladzovacia kaďa", description: "Studený kúpeľ po saune povzbudí krvný obeh a dodá energiu." },
+        { title: "Oddychový kútik", description: "Prútené kreslá a horská fototapeta pozývajú na pokojný odpočinok." }
       ],
       hoursTitle: "Otváracie hodiny",
       hoursDesc: "Wellness zóna je otvorená denne od 16:00 do 22:00. Na požiadanie je možné skoršie zapnutie.",
@@ -1444,6 +1496,8 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       videoLoading: "Načítavanie videa..."
     },
     footerExtra: {
+      brandDescriptor: "Rezort • Reštaurácia",
+      aboutSnippet: "Watra Korbielów je celoročný horský rezort v Žywieckych Beskydách, na úpätí vrchu Pilsko (1 557 m). Ponúka lyžiarske vleky vzdialené 100 m, vírivku pod hviezdami, tradičnú goralskú kuchyňu a pohodlné ubytovanie s 10 % zľavou pri priamej rezervácii.",
       directGuarantee: "Záruka priamej rezervácie: zľava 10% a parkovanie zdarma",
       depositNote: "Do správy pre prijímateľa uveďte priezvisko a termín pobytu.",
       pagesTitle: "Stránky & Sekcie",
@@ -1555,18 +1609,21 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       emailDesc: "Wir antworten schnellstmöglich",
       emailSubtitle: "Wir antworten schnellstmöglich",
       locationTitle: "Standort des Resorts",
-      locationRegion: "Beskid Żywiecki • Polen",
-      locationSubtitle: "Beskid Żywiecki • Polen",
-      address: "ul. Graniczna 17, 34-335 Korbielów",
+      locationRegion: "Saybuscher Beskiden • Polen",
+      locationSubtitle: "Saybuscher Beskiden • Polen",
+      address: "Graniczna-Straße 17, 34-335 Korbielów",
       formTitle: "Anfrage an die Rezeption senden",
       formSubtitle: "Füllen Sie das Formular aus – wir melden uns umgehend bezüglich Zimmerverfügbarkeit, Familienfeiern oder Gruppenaufenthalten.",
-      formSuccessTitle: "Nachricht wurde gesendet!",
-      formSuccessDesc: "Vielen Dank für Ihre Anfrage. Unser Rezeptionsteam wird sich telefonisch oder per E-Mail bei Ihnen melden.",
+      formSuccessTitle: "Anfrage eingegangen",
+      formSuccessDesc: "Vielen Dank für Ihre Nachricht. Ihre Anfrage wurde gespeichert und ist für die Rezeption in der Gästeverwaltung verfügbar.",
       formSendAnother: "Weitere Anfrage senden",
+      submitError: "Ihre Anfrage konnte nicht gesendet werden. Bitte versuchen Sie es später erneut oder kontaktieren Sie uns telefonisch.",
       nameLabel: "Vor- und Nachname *",
       namePlaceholder: "z.B. Max Mustermann",
       phoneLabel: "Telefonnummer *",
+      phonePlaceholder: "+48 600 000 000",
       emailLabel: "E-Mail-Adresse *",
+      emailPlaceholder: "sie@beispiel.de",
       datesLabel: "Geplanter Reisezeitraum (optional)",
       datesPlaceholder: "z.B. 15.–20. Februar (4 Personen)",
       messageLabel: "Nachricht / Frage *",
@@ -1628,7 +1685,10 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       geoGenericError: "Fehler beim Abrufen der GPS-Koordinaten.",
       inputEmptyError: "Bitte geben Sie einen Startort oder eine Adresse ein.",
       calculateError: "Route konnte nicht berechnet werden. Bitte Eingabe prüfen.",
-      myLocation: "Mein Standort"
+      myLocation: "Mein Standort",
+      mapTitle: "Google Maps — Watra Korbielów",
+      resortName: "Watra Korbielów Resort",
+      nearbyLandmarks: "100 m zum Skilift Cypisek • Pilsko: 1.557 m ü. d. M."
     },
     socialShare: {
       sharePrompt: "Diesen Rabatt mit Freunden teilen:",
@@ -1750,13 +1810,20 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
         "Stimmungsvolle LED-Beleuchtung mit Blick auf den Fichtenwald"
       ],
       bookJacuzziBtn: "Aufenthalt mit Whirlpool buchen",
-      saunaBadge: "Trockene Finnische Sauna",
-      saunaHeading: "Traditionelle Finnische Trockensauna",
-      saunaLead: "Aus natürlichem Fichtenholz gefertigt. Wohltuend nach einem Skitag oder einer mehrstündigen Gipfeltour. Stärkt das Immunsystem und fördert die Muskelregeneration.",
+      saunaBadge: "Aktivität • Erholung • Wohlbefinden",
+      saunaHeading: "Fitness & Wohlbefinden",
+      saunaLead: "Laufband und Fahrradtrainer fördern die Fitness; im Ruhebereich tanken Sie nach Bergaktivitäten neue Kraft.",
       saunaPoints: [
-        "Temperatur: 85°C – 95°C mit natürlichen Kräuteraufgüssen",
-        "Abkühlduschen und bequeme Ruheliegen",
-        "Saunahandtücher und Tücher im Preis inbegriffen"
+        "Aromatherapie, Erlebnisduschen und bequeme Ruheliegen",
+        "Saunatücher und -laken inklusive"
+      ],
+      activities: [
+        { title: "Salzgrotte", description: "Natürliches Salz schafft ein meeresähnliches Mikroklima zum Durchatmen und Entspannen." },
+        { title: "Traditionelle Finnische Sauna", description: "Kiefersauna bei 85–95°C fördert die Erholung; Aromatherapie, Duschen, Liegen und Textilien inklusive." },
+        { title: "Fitnessraum", description: "Laufband und Fahrradtrainer ermöglichen Training bei jedem Wetter." },
+        { title: "Entspannungsbadezuber", description: "Ein warmes Bad im Holzzuber lockert die Muskeln nach Bergwanderungen." },
+        { title: "Kaltwasserbecken", description: "Das kalte Tauchbad nach der Sauna belebt den Kreislauf und gibt Energie." },
+        { title: "Ruhebereich", description: "Korbsessel und Bergmotiv schaffen einen gemütlichen Ort zum Abschalten." }
       ],
       hoursTitle: "Öffnungszeiten",
       hoursDesc: "Der Wellnessbereich ist täglich von 16:00 bis 22:00 Uhr geöffnet. Frühere Aktivierung auf Anfrage möglich.",
@@ -1827,6 +1894,8 @@ export const pagesTranslations: Record<Language, PageTranslations> = {
       videoLoading: "Video wird geladen..."
     },
     footerExtra: {
+      brandDescriptor: "Resort • Restaurant",
+      aboutSnippet: "Watra Korbielów ist ein ganzjährig geöffnetes Bergresort in den Saybuscher Beskiden am Fuße des Pilsko (1.557 m). Freuen Sie sich auf Skilifte in nur 100 m Entfernung, einen Whirlpool unter dem Sternenhimmel, traditionelle Hochlandküche und komfortable Unterkünfte mit 10 % Rabatt bei Direktbuchung.",
       directGuarantee: "Direktbucher-Vorteil: 10% Rabatt und kostenloser Parkplatz",
       depositNote: "Bitte geben Sie Ihren Namen und den Reisezeitraum im Überweisungsbetreff an.",
       pagesTitle: "Seiten & Bereiche",

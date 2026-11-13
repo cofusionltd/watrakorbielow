@@ -10,8 +10,8 @@ export interface ChatMessageItem {
   id: string;
   role: 'user' | 'model' | 'admin';
   content: string;
-  translationPl?: string; // Auto-translated into Polish for admin
-  translationGuest?: string; // Translated into guest language when admin speaks Polish
+  translationPl?: string;
+  translationGuest?: string;
   timestamp: string;
 }
 
@@ -28,325 +28,147 @@ export interface LiveChatSessionData {
 }
 
 let aiClient: GoogleGenAI | null = null;
-if (process.env.GEMINI_API_KEY) {
-  aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-}
+if (process.env.GEMINI_API_KEY) aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// In-memory live chat sessions store
-export const liveChatSessions: Map<string, LiveChatSessionData> = new Map([
-  [
-    'session-sample-1',
-    {
-      sessionId: 'session-sample-1',
-      guestName: 'Martin Novák (Bratislava)',
-      guestEmail: 'm.novak@example.sk',
-      language: 'sk',
-      isAiPaused: false,
-      adminTakeover: false,
-      lastMessage: 'Ahoj, chceli by sme si zarezervovať vírivku na piatok večer o 20:00.',
-      lastMessageAt: new Date(Date.now() - 1000 * 60 * 4).toISOString(),
-      messages: [
-        {
-          id: 'm-1',
-          role: 'user',
-          content: 'Dobrý deň, sme na ceste zo Žiliny. Máte ešte voľnú vírivku dnes večer?',
-          translationPl: 'Dzień dobry, jesteśmy w drodze z Żyliny. Czy macie jeszcze wolne jacuzzi dziś wieczorem?',
-          timestamp: new Date(Date.now() - 1000 * 60 * 10).toISOString()
-        },
-        {
-          id: 'm-2',
-          role: 'model',
-          content: 'Dobrý deň! Áno, vonkajšia cédrová vírivka (38°C) pod hviezdami má voľný termín dnes o 20:30. Môžete si ju zarezervovať priamo na recepcii alebo Vám termín môžem podržať.',
-          translationPl: 'Dzień dobry! Tak, zewnętrzne jacuzzi cedrowe (38°C) pod gwiazdami ma wolny termin dziś o 20:30. Możecie zarezerwować na recepcji lub mogę przytrzymać termin.',
-          timestamp: new Date(Date.now() - 1000 * 60 * 9).toISOString()
-        },
-        {
-          id: 'm-3',
-          role: 'user',
-          content: 'Ahoj, chceli by sme si zarezervovať vírivku na piatok večer o 20:00.',
-          translationPl: 'Cześć, chcielibyśmy zarezerwować jacuzzi na piątek wieczorem o 20:00.',
-          timestamp: new Date(Date.now() - 1000 * 60 * 4).toISOString()
-        }
-      ]
-    }
-  ],
-  [
-    'session-sample-2',
-    {
-      sessionId: 'session-sample-2',
-      guestName: 'Hans Schmidt (München)',
-      guestEmail: 'hans.schmidt@de-travel.de',
-      language: 'de',
-      isAiPaused: true,
-      adminTakeover: true,
-      lastMessage: 'Vielen Dank, das ist sehr hilfreich!',
-      lastMessageAt: new Date(Date.now() - 1000 * 60 * 1).toISOString(),
-      messages: [
-        {
-          id: 'm-4',
-          role: 'user',
-          content: 'Guten Tag, gibt es einen beheizten Skiraum und Skiverleih im Hotel?',
-          translationPl: 'Dzień dobry, czy w hotelu jest ogrzewana narciarnia i wypożyczalnia nart?',
-          timestamp: new Date(Date.now() - 1000 * 60 * 8).toISOString()
-        },
-        {
-          id: 'm-5',
-          role: 'admin',
-          content: 'Guten Tag Herr Schmidt! Ja, wir haben einen kostenfreien beheizten Skiraum mit Skischuhtrocknern direkt im Erdgeschoss. Skiverleih ist direkt beim Lift Cypisek 100 m vom Hotel.',
-          translationPl: 'Dzień dobry Panie Schmidt! Tak, mamy bezpłatną ogrzewaną narciarnię z suszarkami do butów narciarskich na parterze. Wypożyczalnia nart jest 100m od hotelu przy stoku Cypisek.',
-          timestamp: new Date(Date.now() - 1000 * 60 * 3).toISOString()
-        },
-        {
-          id: 'm-6',
-          role: 'user',
-          content: 'Vielen Dank, das ist sehr hilfreich!',
-          translationPl: 'Bardzo dziękuję, to bardzo pomocne!',
-          timestamp: new Date(Date.now() - 1000 * 60 * 1).toISOString()
-        }
-      ]
-    }
-  ]
-]);
-
-// Multi-language Translation Engine (using Gemini when available, or smart dictionary fallback)
 export async function translateText(text: string, targetLang: 'pl' | 'en' | 'de' | 'sk', sourceLang = 'auto'): Promise<string> {
-  if (!text || !text.trim()) return '';
-
-  // 1. Try Gemini AI translation if key present
+  if (!text.trim()) return '';
   if (aiClient) {
     try {
-      const prompt = `Translate the following hotel hospitality message into ${
+      const prompt = `Translate the following hospitality message from ${sourceLang} into ${
         targetLang === 'pl' ? 'Polish' : targetLang === 'en' ? 'English' : targetLang === 'de' ? 'German' : 'Slovak'
-      }. Maintain mountain resort courtesy, natural tone and accuracy. Return ONLY the translated sentence with no commentary:\n\n"${text}"`;
-
-      const res = await aiClient.models.generateContent({
+      }. Return only the translation:\n\n${text}`;
+      const response = await aiClient.models.generateContent({
         model: 'gemini-3.8-flash',
         contents: prompt,
-        config: {
-          temperature: 0.1,
-          maxOutputTokens: 250
-        }
+        config: { temperature: 0.1, maxOutputTokens: 250 }
       });
-
-      const translated = res.text?.trim();
-      if (translated && !translated.startsWith('Error')) {
-        return translated.replace(/^["']|["']$/g, '');
-      }
-    } catch (err) {
-      console.warn("Gemini translate error, using glossary fallback:", err);
+      const translated = response.text?.trim();
+      if (translated && !translated.startsWith('Error')) return translated.replace(/^["']|["']$/g, '');
+      console.warn('Translation provider returned no translated text.');
+    } catch (error) {
+      console.warn('Translation provider failed; using the built-in phrase glossary.', error);
     }
   }
 
-  // 2. High quality fallback vocabulary rules
-  const clean = text.trim();
-
-  // If target is Polish
-  if (targetLang === 'pl') {
-    if (clean.includes('Dobrý deň') || clean.includes('Ahoj')) return clean.replace(/Dobrý deň|Ahoj/gi, 'Dzień dobry');
-    if (clean.includes('Guten Tag') || clean.includes('Hallo')) return clean.replace(/Guten Tag|Hallo/gi, 'Dzień dobry');
-    if (clean.includes('Good morning') || clean.includes('Hello')) return clean.replace(/Good morning|Hello/gi, 'Dzień dobry');
-    return clean;
-  }
-
-  // If translating from Polish to Slovak
-  if (targetLang === 'sk') {
-    return clean
-      .replace(/Dzień dobry/gi, 'Dobrý deň')
-      .replace(/Dziękujemy/gi, 'Ďakujeme')
-      .replace(/Do zobaczenia/gi, 'Dovidenia')
-      .replace(/pokój/gi, 'izba')
-      .replace(/jacuzzi/gi, 'vírivka')
-      .replace(/śniadanie/gi, 'raňajky');
-  }
-
-  // If translating from Polish to German
-  if (targetLang === 'de') {
-    return clean
-      .replace(/Dzień dobry/gi, 'Guten Tag')
-      .replace(/Dziękujemy/gi, 'Vielen Dank')
-      .replace(/Do zobaczenia/gi, 'Auf Wiedersehen')
-      .replace(/pokój/gi, 'Zimmer')
-      .replace(/jacuzzi/gi, 'Whirlpool')
-      .replace(/śniadanie/gi, 'Frühstück');
-  }
-
-  // If translating to English
-  if (targetLang === 'en') {
-    return clean
-      .replace(/Dzień dobry/gi, 'Hello')
-      .replace(/Dziękujemy/gi, 'Thank you')
-      .replace(/Do zobaczenia/gi, 'See you soon')
-      .replace(/pokój/gi, 'room')
-      .replace(/jacuzzi/gi, 'hot tub')
-      .replace(/śniadanie/gi, 'breakfast');
-  }
-
-  return clean;
+  const substitutions: Record<typeof targetLang, Array<[RegExp, string]>> = {
+    pl: [[/Dobrý deň|Ahoj|Guten Tag|Hallo|Good morning|Hello/gi, 'Dzień dobry']],
+    en: [[/Dzień dobry/gi, 'Hello'], [/Dziękujemy/gi, 'Thank you'], [/pokój/gi, 'room'], [/jacuzzi/gi, 'hot tub'], [/śniadanie/gi, 'breakfast']],
+    de: [[/Dzień dobry/gi, 'Guten Tag'], [/Dziękujemy/gi, 'Vielen Dank'], [/pokój/gi, 'Zimmer'], [/jacuzzi/gi, 'Whirlpool'], [/śniadanie/gi, 'Frühstück']],
+    sk: [[/Dzień dobry/gi, 'Dobrý deň'], [/Dziękujemy/gi, 'Ďakujeme'], [/pokój/gi, 'izba'], [/jacuzzi/gi, 'vírivka'], [/śniadanie/gi, 'raňajky']]
+  };
+  return substitutions[targetLang].reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), text.trim());
 }
 
-// POST /api/translate - Translation API
 export async function handleTranslate(req: Request, res: Response) {
   try {
     const { text, targetLang = 'pl', sourceLang = 'auto' } = req.body;
-    if (!text) {
-      return res.status(400).json({ error: "Brak tekstu do przetłumaczenia." });
+    if (!text) return res.status(400).json({ error: 'Brak tekstu do przetłumaczenia.' });
+    if (!['pl', 'en', 'de', 'sk'].includes(targetLang)) {
+      return res.status(400).json({ error: 'Nieobsługiwany język docelowy.' });
     }
-    const translated = await translateText(text, targetLang as any, sourceLang);
-    return res.json({ original: text, targetLang, translated });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message || "Błąd tłumaczenia." });
+    return res.json({ original: text, targetLang, translated: await translateText(text, targetLang, sourceLang) });
+  } catch (error) {
+    console.error('Translation failed:', error);
+    return res.status(503).json({ error: 'Usługa tłumaczenia jest obecnie niedostępna.' });
   }
 }
 
-// GET /api/admin/chats - List all active chat sessions
+function mapChatSession(row: NonNullable<Awaited<ReturnType<typeof dbGetChatSession>>>): LiveChatSessionData {
+  return {
+    sessionId: row.sessionId,
+    guestName: row.guestName,
+    guestEmail: row.guestEmail || undefined,
+    language: row.language as LiveChatSessionData['language'],
+    isAiPaused: row.isAiPaused,
+    adminTakeover: row.adminTakeover,
+    lastMessage: row.lastMessage || '',
+    lastMessageAt: row.lastMessageAt?.toISOString() || '',
+    messages: JSON.parse(row.messagesJson) as ChatMessageItem[]
+  };
+}
+
 export async function handleGetChatSessions(_req: Request, res: Response) {
   try {
-    const dbRows = await dbGetChatSessions();
-    if (dbRows && dbRows.length > 0) {
-      for (const row of dbRows) {
-        let msgs: ChatMessageItem[] = [];
-        try {
-          msgs = JSON.parse(row.messagesJson);
-        } catch (_) {}
-
-        liveChatSessions.set(row.sessionId, {
-          sessionId: row.sessionId,
-          guestName: row.guestName,
-          guestEmail: row.guestEmail || undefined,
-          language: (row.language as any) || 'pl',
-          isAiPaused: Boolean(row.isAiPaused),
-          adminTakeover: Boolean(row.adminTakeover),
-          lastMessage: row.lastMessage || '',
-          lastMessageAt: row.lastMessageAt ? row.lastMessageAt.toISOString() : new Date().toISOString(),
-          messages: msgs
-        });
-      }
-    }
-  } catch (err) {
-    console.warn("DB getChatSessions fallback:", err);
+    const rows = await dbGetChatSessions();
+    return res.json(rows.map(mapChatSession));
+  } catch (error) {
+    console.error('Chat session list database query failed:', error);
+    return res.status(503).json({ error: 'Nie udało się pobrać sesji czatu z bazy danych.' });
   }
-
-  const list = Array.from(liveChatSessions.values()).sort(
-    (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
-  );
-
-  return res.json(list);
 }
 
-// GET /api/admin/chats/:sessionId - Get single conversation
 export async function handleGetChatSession(req: Request, res: Response) {
-  const { sessionId } = req.params;
-  const session = liveChatSessions.get(sessionId);
-  if (!session) {
-    return res.status(404).json({ error: "Sesja czatu nie istnieje." });
+  try {
+    const row = await dbGetChatSession(req.params.sessionId);
+    if (!row) return res.status(404).json({ error: 'Sesja czatu nie istnieje.' });
+    return res.json(mapChatSession(row));
+  } catch (error) {
+    console.error('Chat session database query failed:', error);
+    return res.status(503).json({ error: 'Nie udało się pobrać sesji czatu z bazy danych.' });
   }
-  return res.json(session);
 }
 
-// POST /api/admin/chats/:sessionId/takeover - Admin takes over or resumes AI
 export async function handleToggleChatTakeover(req: Request, res: Response) {
-  const { sessionId } = req.params;
-  const { takeover, pauseAi } = req.body;
-
-  let session = liveChatSessions.get(sessionId);
-  if (!session) {
-    session = {
-      sessionId,
-      guestName: 'Gość Watra Korbielów',
-      language: 'pl',
-      isAiPaused: false,
-      adminTakeover: false,
-      lastMessage: '',
-      lastMessageAt: new Date().toISOString(),
-      messages: []
-    };
-    liveChatSessions.set(sessionId, session);
-  }
-
-  const isAiPaused = pauseAi !== undefined ? Boolean(pauseAi) : (takeover !== undefined ? Boolean(takeover) : !session.isAiPaused);
-  const adminTakeover = takeover !== undefined ? Boolean(takeover) : isAiPaused;
-
-  session.isAiPaused = isAiPaused;
-  session.adminTakeover = adminTakeover;
-  session.lastMessageAt = new Date().toISOString();
-
-  // Add system notice into message stream
-  const systemNotice: ChatMessageItem = {
-    id: `sys-${Date.now()}`,
-    role: 'admin',
-    content: adminTakeover
-      ? '👤 Recepcja Watra Korbielów przejęła rozmowę. Odpowiadasz na żywo jako pracownik hotelu.'
-      : '🤖 AI Concierge został ponownie uruchomiony dla tego gościa.',
-    timestamp: new Date().toISOString()
-  };
-  session.messages.push(systemNotice);
-
   try {
+    const row = await dbGetChatSession(req.params.sessionId);
+    if (!row) return res.status(404).json({ error: 'Sesja czatu nie istnieje.' });
+    const session = mapChatSession(row);
+    const { takeover, pauseAi } = req.body;
+    session.isAiPaused = pauseAi !== undefined
+      ? Boolean(pauseAi)
+      : takeover !== undefined ? Boolean(takeover) : !session.isAiPaused;
+    session.adminTakeover = takeover !== undefined ? Boolean(takeover) : session.isAiPaused;
+    session.lastMessageAt = new Date().toISOString();
+    session.messages.push({
+      id: `sys-${Date.now()}`,
+      role: 'admin',
+      content: session.adminTakeover
+        ? '👤 Recepcja Watra Korbielów przejęła rozmowę. Odpowiadasz na żywo jako pracownik hotelu.'
+        : '🤖 AI Concierge został ponownie uruchomiony dla tego gościa.',
+      timestamp: session.lastMessageAt
+    });
+
     await dbUpsertChatSession({
-      sessionId: session.sessionId,
-      guestName: session.guestName,
-      guestEmail: session.guestEmail,
-      language: session.language,
-      isAiPaused: session.isAiPaused,
-      adminTakeover: session.adminTakeover,
-      lastMessage: session.lastMessage,
+      ...session,
       messagesJson: JSON.stringify(session.messages)
     });
-  } catch (dbErr) {
-    console.warn("DB save chat takeover fallback:", dbErr);
+    return res.json({ success: true, session });
+  } catch (error) {
+    console.error('Chat takeover database update failed:', error);
+    return res.status(503).json({ error: 'Nie udało się zapisać ustawienia czatu w bazie danych.' });
   }
-
-  return res.json({ success: true, session });
 }
 
-// POST /api/admin/chats/:sessionId/message - Admin sends message to guest with auto-translation
 export async function handleAdminSendMessage(req: Request, res: Response) {
-  const { sessionId } = req.params;
-  const { text, autoTranslate = true } = req.body;
-
-  if (!text || !text.trim()) {
-    return res.status(400).json({ error: "Wiadomość nie może być pusta." });
-  }
-
-  let session = liveChatSessions.get(sessionId);
-  if (!session) {
-    return res.status(404).json({ error: "Sesja nie istnieje." });
-  }
-
-  let translationGuest: string | undefined = undefined;
-  if (autoTranslate && session.language !== 'pl') {
-    translationGuest = await translateText(text.trim(), session.language, 'pl');
-  }
-
-  const newMsg: ChatMessageItem = {
-    id: `admin-msg-${Date.now()}`,
-    role: 'admin',
-    content: text.trim(),
-    translationPl: text.trim(), // Admin wrote in Polish
-    translationGuest: translationGuest || text.trim(),
-    timestamp: new Date().toISOString()
-  };
-
-  session.messages.push(newMsg);
-  session.lastMessage = translationGuest || text.trim();
-  session.lastMessageAt = new Date().toISOString();
-  session.adminTakeover = true;
-  session.isAiPaused = true;
-
   try {
-    await dbUpsertChatSession({
-      sessionId: session.sessionId,
-      guestName: session.guestName,
-      guestEmail: session.guestEmail,
-      language: session.language,
-      isAiPaused: session.isAiPaused,
-      adminTakeover: session.adminTakeover,
-      lastMessage: session.lastMessage,
-      messagesJson: JSON.stringify(session.messages)
-    });
-  } catch (dbErr) {
-    console.warn("DB save admin message fallback:", dbErr);
-  }
+    const { text, autoTranslate = true } = req.body;
+    if (typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ error: 'Wiadomość nie może być pusta.' });
+    }
 
-  return res.status(201).json({ success: true, message: newMsg, session });
+    const row = await dbGetChatSession(req.params.sessionId);
+    if (!row) return res.status(404).json({ error: 'Sesja nie istnieje.' });
+    const session = mapChatSession(row);
+    const translationGuest = autoTranslate && session.language !== 'pl'
+      ? await translateText(text.trim(), session.language, 'pl')
+      : text.trim();
+    const message: ChatMessageItem = {
+      id: `admin-msg-${Date.now()}`,
+      role: 'admin',
+      content: text.trim(),
+      translationPl: text.trim(),
+      translationGuest,
+      timestamp: new Date().toISOString()
+    };
+    session.messages.push(message);
+    session.lastMessage = translationGuest;
+    session.lastMessageAt = message.timestamp;
+    session.adminTakeover = true;
+    session.isAiPaused = true;
+    await dbUpsertChatSession({ ...session, messagesJson: JSON.stringify(session.messages) });
+    return res.status(201).json({ success: true, message, session });
+  } catch (error) {
+    console.error('Admin chat message database write failed:', error);
+    return res.status(503).json({ error: 'Nie udało się zapisać wiadomości w bazie danych.' });
+  }
 }

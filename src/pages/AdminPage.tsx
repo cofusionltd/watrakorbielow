@@ -1,3 +1,4 @@
+import { CmsManagedImage } from '../components/CmsManagedImage';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Megaphone,
@@ -43,6 +44,7 @@ import { AdminGuestsManager } from '../components/admin/AdminGuestsManager';
 import { AdminLiveChatManager } from '../components/admin/AdminLiveChatManager';
 import { AdminCmsManager } from '../components/admin/AdminCmsManager';
 import { AdminDiscountsManager } from '../components/admin/AdminDiscountsManager';
+import { AdminSiteControls } from '../components/admin/AdminSiteControls';
 import { adminFetch, getAdminToken, setAdminToken, clearAdminToken } from '../lib/adminApi';
 import { Language } from '../types';
 import { adminText } from '../adminTranslations';
@@ -57,7 +59,7 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Tab
-  const [activeTab, setActiveTab] = useState<'cms' | 'discounts' | 'analytics' | 'rooms' | 'live-chat' | 'guests' | 'campaigns' | 'reservations' | 'knowledge'>('cms');
+  const [activeTab, setActiveTab] = useState<'cms' | 'controls' | 'discounts' | 'analytics' | 'rooms' | 'live-chat' | 'guests' | 'campaigns' | 'reservations' | 'knowledge'>('cms');
 
   // Campaigns state
   const [campaigns, setCampaigns] = useState<PromotionalCampaign[]>([]);
@@ -588,6 +590,17 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
             <span>{adminText(lang, 'Zarządzanie Treścią (CMS)')}</span>
           </button>
           <button
+            onClick={() => setActiveTab('controls')}
+            className={`pb-3 px-2 text-sm font-bold flex items-center space-x-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'controls'
+                ? 'border-[#1E3A2B] text-[#1E3A2B]'
+                : 'border-transparent text-neutral-500 hover:text-neutral-900'
+            }`}
+          >
+            <Sliders className="w-4 h-4 text-amber-700" />
+            <span>{adminText(lang, 'Widoczność stron i funkcji')}</span>
+          </button>
+          <button
             onClick={() => setActiveTab('discounts')}
             className={`pb-3 px-2 text-sm font-bold flex items-center space-x-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'discounts'
@@ -872,7 +885,7 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
                           : 'border-transparent opacity-75 hover:opacity-100 hover:scale-[1.02]'
                       }`}
                     >
-                      <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                      <CmsManagedImage src={img.url} alt={img.label} className="w-full h-full object-cover" />
                       {formImageUrl === img.url && (
                         <div className="absolute top-1 right-1 bg-[#1E3A2B] text-[#D4A373] p-0.5 rounded-full shadow-md">
                           <Check className="w-3 h-3" />
@@ -888,7 +901,7 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
                 {/* Active preview bar */}
                 {formImageUrl && (
                   <div className="flex items-center space-x-3 p-2.5 bg-white rounded-xl border border-neutral-200 shadow-2xs">
-                    <img
+                    <CmsManagedImage
                       src={formImageUrl}
                       alt="Wybrany podgląd"
                       className="w-14 h-10 rounded-lg object-cover border border-neutral-300 shrink-0"
@@ -955,6 +968,10 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
           <AdminCmsManager lang={lang} />
         )}
 
+        {activeTab === 'controls' && (
+          <AdminSiteControls lang={lang} />
+        )}
+
         {/* TAB: DISCOUNT CODES & PROMOTIONS MANAGEMENT */}
         {activeTab === 'discounts' && (
           <AdminDiscountsManager />
@@ -1010,7 +1027,7 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
                     <div>
                       {/* Image & Badges */}
                       <div className="relative h-44 overflow-hidden">
-                        <img
+                        <CmsManagedImage
                           src={camp.imageUrl}
                           alt={camp.title}
                           className="w-full h-full object-cover"
