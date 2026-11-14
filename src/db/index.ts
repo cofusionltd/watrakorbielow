@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema.ts';
+import { Ipv4Socket } from './ipv4Socket.ts';
 
 declare global {
   var _postgresPool: Pool | undefined;
@@ -34,6 +35,7 @@ export const createPool = () => {
       max: 10,
       connectionTimeoutMillis: 15000,
       ssl: databaseUrl ? { rejectUnauthorized: false } : undefined,
+      stream: () => new Ipv4Socket(),
     });
 
     global._postgresPool.on('error', (err) => {

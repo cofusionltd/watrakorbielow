@@ -6,6 +6,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { sql } from 'drizzle-orm';
 import * as schema from '../src/db/schema.ts';
 import { db } from '../src/db/index.ts';
+import { Ipv4Socket } from '../src/db/ipv4Socket.ts';
 import {
   dbCreatePromotion,
   dbGetAiKnowledge,
@@ -68,6 +69,7 @@ async function applyMigrations(): Promise<void> {
     database: databaseUrl ? undefined : process.env.SQL_DB_NAME?.trim(),
     ssl: databaseUrl ? { rejectUnauthorized: false } : undefined,
     connectionTimeoutMillis: 15000,
+    stream: () => new Ipv4Socket(),
   });
   const migrationDb = drizzle(migrationPool, { schema });
 

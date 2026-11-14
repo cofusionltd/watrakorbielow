@@ -14,6 +14,8 @@ Requirements: Node.js and PostgreSQL.
 
 The server applies Drizzle migrations with `SQL_ADMIN_USER` and uses `SQL_USER` for application reads and writes. It imports initial room, CMS, settings, discount, campaign, knowledge-base, and bundled-media data into PostgreSQL on startup. PostgreSQL is required; the server does not serve mutable application data from an in-memory or file-based fallback.
 
+PostgreSQL TCP connections explicitly use IPv4. For hosted databases, `DATABASE_URL` must resolve to an IPv4 address; if a provider offers both direct and pooler endpoints, use its IPv4-compatible endpoint.
+
 Generate a migration after changing `src/db/schema.ts` with `npm run db:generate`. New generated migrations are applied automatically at the next server startup.
 
 The local configuration in `.env.example` uses database `watra` on `127.0.0.1:5432`. The current local PostgreSQL cluster stores its files in `C:/laragon/data/postgresql`; check a cluster's actual location with `SHOW data_directory;`. Application records are stored in `reservations`, `rooms`, `guest_profiles`, `guest_messages`, `promotions`, `discount_codes`, `media_assets`, `cms_content`, `site_settings`, `ai_knowledge`, `visitor_sessions`, `chat_sessions`, and `users`. Image bytes are stored in `media_assets.data`; CMS content and settings are stored in PostgreSQL JSONB columns.
