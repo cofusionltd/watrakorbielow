@@ -24,9 +24,11 @@ Generate a migration after changing `src/db/schema.ts` with `npm run db:generate
 
 ## Create a manual local database backup
 
-On Windows, install the PostgreSQL client tools (`pg_dump` and `pg_restore`) and ensure they are on `PATH`. If the database is only reachable through Northflank, start the addon port forward first and keep its terminal open.
+On Windows, install the PostgreSQL client tools and ensure they are on `PATH` (`pg_dump` and `pg_restore` for backups; `psql` is also required for restores). If the database is only reachable through Northflank, start the addon port forward first and keep its terminal open.
 
 Run `.\scripts\backup-database.ps1` from PowerShell. Paste the PostgreSQL connection URL at the hidden prompt; it is not saved in the script or printed. The script creates and validates a custom-format dump under `Documents\WatraBackups` by default. An optional output directory can be passed as `-OutputDirectory`. Keep these backup files private and store a separate copy if you need protection from desktop failure.
+
+To test or restore a backup, first create a new empty PostgreSQL database and make sure the destination database URL points to it. Then run `.\scripts\restore-database.ps1 -BackupPath "<path-to-backup.dump>"`. The script validates the archive, prompts for the destination URL without displaying it, checks that the target has no tables, views, or sequences in the `public` schema, and requires you to type the exact destination database name. It never drops existing objects; `pg_restore` runs in a single transaction, so conflicts or errors roll back the restore. Do not use a production database as a restore test target.
 
 The local configuration in `.env.example` uses database `watra` on `127.0.0.1:5432`. The current local PostgreSQL cluster stores its files in `C:/laragon/data/postgresql`; check a cluster's actual location with `SHOW data_directory;`. Application records are stored in `reservations`, `rooms`, `guest_profiles`, `guest_messages`, `promotions`, `discount_codes`, `media_assets`, `cms_content`, `site_settings`, `ai_knowledge`, `visitor_sessions`, `chat_sessions`, and `users`. Image bytes are stored in `media_assets.data`; CMS content and settings are stored in PostgreSQL JSONB columns.
 
