@@ -30,6 +30,23 @@ Run `.\scripts\backup-database.ps1` from PowerShell. Paste the PostgreSQL connec
 
 To test or restore a backup, first create a new empty PostgreSQL database and make sure the destination database URL points to it. Then run `.\scripts\restore-database.ps1 -BackupPath "<path-to-backup.dump>"`. The script validates the archive, prompts for the destination URL without displaying it, checks that the target has no tables, views, or sequences in the `public` schema, and requires you to type the exact destination database name. It never drops existing objects; `pg_restore` runs in a single transaction, so conflicts or errors roll back the restore. Do not use a production database as a restore test target.
 
+## Roll back an application deployment
+
+Northflank deploys `main` automatically. To roll back an application change, identify the bad commit from the Northflank deployment history, then create a new revert commit and merge it through the normal pull-request checks. This keeps Git and the deployed source in sync without rewriting protected history.
+
+For a regular commit, run these commands from a fresh clone or an up-to-date checkout in PowerShell, replacing `<bad-commit>` with the deployed commit SHA and `<rollback-branch>` with a new branch name:
+
+```powershell
+git fetch origin
+git switch -c <rollback-branch> origin/main
+git revert --no-edit <bad-commit>
+git push -u origin <rollback-branch>
+```
+
+Open a pull request from the rollback branch to `main`. After required CI checks pass, merge it; Northflank will build and deploy the revert commit. If the bad change was introduced by a merge commit, use `git revert --no-edit -m 1 <merge-commit>` instead of `git revert --no-edit <bad-commit>` to revert that merge relative to its first parent. If Git reports conflicts, stop and resolve them carefully before pushing; never force-push or reset protected `main`.
+
+This rolls back application code only, not PostgreSQL changes. Reverting code does not undo schema/data migrations, and an older app may not work with a newer database schema. Before a migration that removes or changes existing data/schema, take and validate a backup and plan a compatible forward migration; do not assume an application rollback also restores the database. The database restore script is intended for a new empty database, not direct production rollback.
+
 The local configuration in `.env.example` uses database `watra` on `127.0.0.1:5432`. The current local PostgreSQL cluster stores its files in `C:/laragon/data/postgresql`; check a cluster's actual location with `SHOW data_directory;`. Application records are stored in `reservations`, `rooms`, `guest_profiles`, `guest_messages`, `promotions`, `discount_codes`, `media_assets`, `cms_content`, `site_settings`, `ai_knowledge`, `visitor_sessions`, `chat_sessions`, and `users`. Image bytes are stored in `media_assets.data`; CMS content and settings are stored in PostgreSQL JSONB columns.
 
 ## Manage website images
