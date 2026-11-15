@@ -36,7 +36,7 @@ export function validateEnvironment(): EnvConfig {
   }
 
   return {
-    PORT: Number(process.env.PORT) || 3000,
+    PORT: Number(process.env.PORT) || 8080,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     ADMIN_API_SECRET: adminSecret || (nodeEnv === 'production' ? '' : 'dev-admin-secret'),
     SQL_HOST: sqlHost,

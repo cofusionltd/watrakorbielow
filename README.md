@@ -4,6 +4,8 @@
 
 # Watra Korbielów
 
+Watra Production
+
 ## Run locally
 
 Requirements: Node.js and PostgreSQL.
@@ -11,6 +13,8 @@ Requirements: Node.js and PostgreSQL.
 1. Copy `.env.example` to `.env` and configure the app and migration PostgreSQL credentials.
 2. Install dependencies with `npm install`.
 3. Start the app with `npm run dev`.
+
+The server listens on `process.env.PORT`, defaulting to `8080` for Northflank and Heroku Cloud Native Buildpacks. The buildpack runs `npm run build` during build and `npm start` to launch the built server. Set `PORT=3000` locally if you prefer the previous local port.
 
 The server applies Drizzle migrations with `SQL_ADMIN_USER` and uses `SQL_USER` for application reads and writes. It imports initial room, CMS, settings, discount, campaign, knowledge-base, and bundled-media data into PostgreSQL on startup. PostgreSQL is required; the server does not serve mutable application data from an in-memory or file-based fallback.
 
