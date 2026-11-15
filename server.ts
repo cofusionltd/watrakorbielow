@@ -46,7 +46,17 @@ import {
   handleSendGuestMessage,
   handleGetMyGuestMessages,
   handleSubmitContactInquiry,
+  handleGetContactInquiries,
+  handleUpdateContactInquiryRead,
+  handleDeleteContactInquiry,
 } from "./server/guests.ts";
+import {
+  handleExportContactInquiry,
+  handleMailboxConnect,
+  handleMailboxDisconnect,
+  handleMailboxOAuthCallback,
+  handleMailboxStatus,
+} from "./server/mailboxIntegrations.ts";
 import {
   handleGetChatSessions,
   handleGetChatSession,
@@ -333,6 +343,7 @@ async function startServer() {
 
   // Admin authentication endpoints and router protection
   app.post("/api/admin/login", adminLoginRateLimiter, handleAdminLogin);
+  app.get("/api/admin/mailbox/oauth/:provider/callback", handleMailboxOAuthCallback);
   app.use("/api/admin", requireAdminAuth);
 
   // Initialize Gemini AI Client (only on server side)
@@ -1561,6 +1572,13 @@ async function startServer() {
   app.put("/api/admin/guests/:id/badges", handleUpdateGuestBadges);
   app.get("/api/admin/guests/:email/messages", handleGetGuestMessages);
   app.post("/api/admin/guests/:email/messages", handleSendGuestMessage);
+  app.get("/api/admin/inquiries", handleGetContactInquiries);
+  app.patch("/api/admin/inquiries/:id/read", handleUpdateContactInquiryRead);
+  app.delete("/api/admin/inquiries/:id", handleDeleteContactInquiry);
+  app.get("/api/admin/mailbox/status", handleMailboxStatus);
+  app.post("/api/admin/mailbox/:provider/connect", handleMailboxConnect);
+  app.delete("/api/admin/mailbox/:provider", handleMailboxDisconnect);
+  app.post("/api/admin/inquiries/:id/export/:provider", handleExportContactInquiry);
   app.get("/api/guest/messages", handleGetMyGuestMessages);
   app.post("/api/contact/inquiries", contactInquiryRateLimiter, handleSubmitContactInquiry);
 

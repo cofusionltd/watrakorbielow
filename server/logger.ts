@@ -119,36 +119,37 @@ export function requestLoggingMiddleware(req: Request, res: Response, next: Next
   }
 
   const start = Date.now();
-  const { method, originalUrl } = req;
+  const { method } = req;
+  const loggedUrl = req.path;
 
   res.on('finish', () => {
     const duration = Date.now() - start;
     const statusCode = res.statusCode;
 
     // Filter out chat polling 200s if desired or log them cleanly
-    const isChatPoll = originalUrl.includes('/api/chat/session/') || originalUrl.includes('/api/admin/chats');
+    const isChatPoll = loggedUrl.includes('/api/chat/session/') || loggedUrl.includes('/api/admin/chats');
     if (isChatPoll && statusCode === 200 && duration < 50) {
       return;
     }
 
     if (statusCode >= 500) {
-      logger.error(`HTTP ${method} ${originalUrl} ${statusCode} - ${duration}ms`, undefined, {
+      logger.error(`HTTP ${method} ${loggedUrl} ${statusCode} - ${duration}ms`, undefined, {
         method,
-        url: originalUrl,
+        url: loggedUrl,
         statusCode,
         duration
       });
     } else if (statusCode >= 400) {
-      logger.warn(`HTTP ${method} ${originalUrl} ${statusCode} - ${duration}ms`, {
+      logger.warn(`HTTP ${method} ${loggedUrl} ${statusCode} - ${duration}ms`, {
         method,
-        url: originalUrl,
+        url: loggedUrl,
         statusCode,
         duration
       });
     } else {
-      logger.info(`HTTP ${method} ${originalUrl} ${statusCode} - ${duration}ms`, {
+      logger.info(`HTTP ${method} ${loggedUrl} ${statusCode} - ${duration}ms`, {
         method,
-        url: originalUrl,
+        url: loggedUrl,
         statusCode,
         duration
       });

@@ -11,9 +11,11 @@ import {
   discountCodes,
   cmsContent,
   siteSettings,
-  mediaAssets
+  mediaAssets,
+  mailboxIntegrations,
+  mailboxOauthStates
 } from './schema.ts';
-import { and, eq, desc, asc, ilike, lt, gt, ne, sql } from 'drizzle-orm';
+import { and, eq, desc, asc, ilike, lt, gt, ne, sql, or, like } from 'drizzle-orm';
 
 // --- ROOMS (Central Source of Truth) ---
 export async function dbGetRooms() {
@@ -178,6 +180,159 @@ export async function dbGetGuestMessages(guestEmail?: string) {
   }
 }
 
+const contactInquiryCondition = or(
+  eq(guestMessages.type, 'inquiry'),
+  like(guestMessages.message, 'Telefon:%'),
+)!;
+
+export async function dbGetContactInquiries() {
+  try {
+    return await db.select().from(guestMessages)
+      .where(and(eq(guestMessages.sender, 'guest'), contactInquiryCondition))
+      .orderBy(desc(guestMessages.createdAt))
+      .limit(500);
+  } catch (error) {
+    console.error('dbGetContactInquiries error:', error);
+    throw new Error('Could not load contact inquiries', { cause: error });
+  }
+}
+
+export async function dbGetContactInquiry(id: string) {
+  try {
+    const [inquiry] = await db.select().from(guestMessages)
+      .where(and(
+        eq(guestMessages.id, id),
+        eq(guestMessages.sender, 'guest'),
+        contactInquiryCondition
+      ))
+      .limit(1);
+    return inquiry || null;
+  } catch (error) {
+    console.error('dbGetContactInquiry error:', error);
+    throw new Error('Could not load contact inquiry', { cause: error });
+  }
+}
+
+export async function dbUpdateContactInquiryRead(id: string, isRead: boolean) {
+  try {
+    const [updated] = await db.update(guestMessages)
+      .set({ isRead })
+      .where(and(
+        eq(guestMessages.id, id),
+        eq(guestMessages.sender, 'guest'),
+        contactInquiryCondition
+      ))
+      .returning();
+    return updated || null;
+  } catch (error) {
+    console.error('dbUpdateContactInquiryRead error:', error);
+    throw new Error('Could not update contact inquiry read status', { cause: error });
+  }
+}
+
+export async function dbDeleteContactInquiry(id: string) {
+  try {
+    const [deleted] = await db.delete(guestMessages)
+      .where(and(
+        eq(guestMessages.id, id),
+        eq(guestMessages.sender, 'guest'),
+        contactInquiryCondition
+      ))
+      .returning({ id: guestMessages.id });
+    return Boolean(deleted);
+  } catch (error) {
+    console.error('dbDeleteContactInquiry error:', error);
+    throw new Error('Could not delete contact inquiry', { cause: error });
+  }
+}
+
+export async function dbGetMailboxIntegration(provider: string) {
+  try {
+    const [integration] = await db.select().from(mailboxIntegrations)
+      .where(eq(mailboxIntegrations.provider, provider))
+      .limit(1);
+    return integration || null;
+  } catch (error) {
+    console.error('dbGetMailboxIntegration error:', error);
+    throw new Error('Could not load mailbox connection', { cause: error });
+  }
+}
+
+export async function dbGetMailboxIntegrations() {
+  try {
+    return await db.select().from(mailboxIntegrations);
+  } catch (error) {
+    console.error('dbGetMailboxIntegrations error:', error);
+    throw new Error('Could not load mailbox connections', { cause: error });
+  }
+}
+
+export async function dbSaveMailboxIntegration(data: {
+  provider: string;
+  accountEmail: string;
+  encryptedRefreshToken: string;
+}) {
+  try {
+    const [integration] = await db.insert(mailboxIntegrations).values({
+      ...data,
+      updatedAt: new Date(),
+    }).onConflictDoUpdate({
+      target: mailboxIntegrations.provider,
+      set: {
+        accountEmail: data.accountEmail,
+        encryptedRefreshToken: data.encryptedRefreshToken,
+        updatedAt: new Date(),
+      },
+    }).returning();
+    return integration;
+  } catch (error) {
+    console.error('dbSaveMailboxIntegration error:', error);
+    throw new Error('Could not save mailbox connection', { cause: error });
+  }
+}
+
+export async function dbDeleteMailboxIntegration(provider: string) {
+  try {
+    const [deleted] = await db.delete(mailboxIntegrations)
+      .where(eq(mailboxIntegrations.provider, provider))
+      .returning({ provider: mailboxIntegrations.provider });
+    return Boolean(deleted);
+  } catch (error) {
+    console.error('dbDeleteMailboxIntegration error:', error);
+    throw new Error('Could not disconnect mailbox', { cause: error });
+  }
+}
+
+export async function dbCreateMailboxOauthState(data: {
+  stateHash: string;
+  provider: string;
+  expiresAt: Date;
+}) {
+  try {
+    await db.delete(mailboxOauthStates).where(lt(mailboxOauthStates.expiresAt, new Date()));
+    await db.insert(mailboxOauthStates).values(data);
+  } catch (error) {
+    console.error('dbCreateMailboxOauthState error:', error);
+    throw new Error('Could not start mailbox authorization', { cause: error });
+  }
+}
+
+export async function dbConsumeMailboxOauthState(stateHash: string, provider: string) {
+  try {
+    const [state] = await db.delete(mailboxOauthStates)
+      .where(and(
+        eq(mailboxOauthStates.stateHash, stateHash),
+        eq(mailboxOauthStates.provider, provider),
+        gt(mailboxOauthStates.expiresAt, new Date())
+      ))
+      .returning({ stateHash: mailboxOauthStates.stateHash });
+    return Boolean(state);
+  } catch (error) {
+    console.error('dbConsumeMailboxOauthState error:', error);
+    throw new Error('Could not validate mailbox authorization state', { cause: error });
+  }
+}
+
 export async function dbCreateGuestMessage(data: {
   id: string;
   guestEmail: string;
@@ -242,7 +397,7 @@ export async function dbCreateContactInquiry(data: {
         sender: 'guest',
         senderName: data.name,
         message: data.message,
-        type: 'chat',
+        type: 'inquiry',
         isRead: false,
         createdAt: new Date(),
       }).returning();

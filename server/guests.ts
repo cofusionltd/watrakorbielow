@@ -5,7 +5,10 @@ import {
   dbUpsertGuestProfile,
   dbGetGuestMessages,
   dbCreateGuestMessage,
-  dbCreateContactInquiry
+  dbCreateContactInquiry,
+  dbDeleteContactInquiry,
+  dbGetContactInquiries,
+  dbUpdateContactInquiryRead
 } from '../src/db/repository.ts';
 
 export interface GuestProfileData {
@@ -27,7 +30,7 @@ export interface GuestMessageData {
   sender: 'admin' | 'guest';
   senderName: string;
   message: string;
-  type: 'chat' | 'promo' | 'notification';
+  type: 'chat' | 'promo' | 'notification' | 'inquiry';
   promoDiscount?: number;
   promoCode?: string;
   isRead: boolean;
@@ -124,6 +127,43 @@ export async function handleSubmitContactInquiry(req: Request, res: Response) {
     return res.status(503).json({
       error: 'Nie udało się teraz zapisać zapytania. Spróbuj ponownie później lub skontaktuj się telefonicznie.',
     });
+  }
+}
+
+export async function handleGetContactInquiries(_req: Request, res: Response) {
+  try {
+    const rows = await dbGetContactInquiries();
+    return res.json(rows.map(mapDbRowToMessage));
+  } catch (error) {
+    console.error('Could not load contact inquiries:', error);
+    return res.status(503).json({ error: 'Could not load contact inquiries.' });
+  }
+}
+
+export async function handleUpdateContactInquiryRead(req: Request, res: Response) {
+  const { isRead } = req.body ?? {};
+  if (typeof isRead !== 'boolean') {
+    return res.status(400).json({ error: 'isRead must be a boolean.' });
+  }
+
+  try {
+    const row = await dbUpdateContactInquiryRead(req.params.id, isRead);
+    if (!row) return res.status(404).json({ error: 'Contact inquiry not found.' });
+    return res.json({ success: true, inquiry: mapDbRowToMessage(row) });
+  } catch (error) {
+    console.error('Could not update contact inquiry read status:', error);
+    return res.status(503).json({ error: 'Could not update contact inquiry.' });
+  }
+}
+
+export async function handleDeleteContactInquiry(req: Request, res: Response) {
+  try {
+    const deleted = await dbDeleteContactInquiry(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Contact inquiry not found.' });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Could not delete contact inquiry:', error);
+    return res.status(503).json({ error: 'Could not delete contact inquiry.' });
   }
 }
 
