@@ -76,7 +76,8 @@ async function applyMigrations(): Promise<void> {
   try {
     await migrate(migrationDb, { migrationsFolder: path.join(process.cwd(), 'drizzle') });
 
-    if (applicationRole && applicationRole !== process.env.SQL_ADMIN_USER?.trim()) {
+    // DATABASE_URL may authenticate through a pooler username that is not a catalog role.
+    if (!databaseUrl && applicationRole && applicationRole !== process.env.SQL_ADMIN_USER?.trim()) {
       const role = `"${applicationRole.replace(/"/g, '""')}"`;
       await migrationPool.query(`GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${role}`);
       await migrationPool.query(`GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ${role}`);
