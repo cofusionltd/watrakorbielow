@@ -45,7 +45,7 @@ export interface GuestMessage {
   sender: 'admin' | 'guest';
   senderName: string;
   message: string;
-  type: 'chat' | 'promo' | 'notification';
+  type: 'chat' | 'promo' | 'notification' | 'inquiry';
   promoDiscount?: number;
   promoCode?: string;
   isRead: boolean;

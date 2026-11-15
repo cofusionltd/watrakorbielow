@@ -96,6 +96,21 @@ export const guestMessages = pgTable('guest_messages', {
   emailIdx: index('idx_guest_messages_email').on(table.guestEmail),
 }));
 
+export const mailboxIntegrations = pgTable('mailbox_integrations', {
+  provider: text('provider').primaryKey(),
+  accountEmail: text('account_email').notNull(),
+  encryptedRefreshToken: text('encrypted_refresh_token').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const mailboxOauthStates = pgTable('mailbox_oauth_states', {
+  stateHash: text('state_hash').primaryKey(),
+  provider: text('provider').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // Real-Time AI Concierge Chat Sessions & Admin Takeover
 export const chatSessions = pgTable('chat_sessions', {
   sessionId: text('session_id').primaryKey(),

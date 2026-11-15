@@ -49,4 +49,31 @@ Provider directory: <https://connectivity.booking.com/>
 
 ## Website contact-form messages
 
-Messages submitted through the website's Contact page are saved in the app database. To read them, sign in to the admin panel, open **Frequent Guests & Badges** (shown as "Stali Goscie & Odznaki" in the Polish UI), select the guest matching the sender's email address, and review that guest's message history. The saved inquiry includes the sender's phone number and planned dates (when provided) in the message body.
+Messages submitted through the website's Contact page are saved in PostgreSQL. Sign in to the admin panel and open **Website inquiries** to review them, filter to unread inquiries, mark messages read or unread, permanently delete an inquiry, or reply by email. Deletion cannot be undone. The reply button opens the administrator's email app with the guest's address and inquiry prefilled; the administrator reviews and sends the reply from that email account.
+
+An administrator can optionally connect a Gmail and/or Outlook mailbox from the same panel. Sending a copy sends the inquiry to that connected mailbox and sets the guest as Reply-To; it does not remove the copy in the admin inbox and does not import the original message with its original email headers.
+
+### Configure mailbox export
+
+These are server-side OAuth settings. Add them as Northflank service secrets/environment variables, not to client code or a committed `.env` file:
+
+- `APP_URL`: the public HTTPS origin of the app, without a trailing path.
+- `GMAIL_OAUTH_CLIENT_ID` and `GMAIL_OAUTH_CLIENT_SECRET`.
+- `MICROSOFT_OAUTH_CLIENT_ID` and `MICROSOFT_OAUTH_CLIENT_SECRET`.
+- `MAILBOX_TOKEN_ENCRYPTION_KEY`: a random 32-byte key encoded as Base64. Generate locally in PowerShell:
+
+  ```powershell
+  $bytes = New-Object byte[] 32
+  [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+  [Convert]::ToBase64String($bytes)
+  ```
+
+Keep the encryption key backed up securely. If it is lost or rotated, reconnect the mailboxes; existing encrypted refresh tokens cannot be recovered with a different key.
+
+For Google, create an OAuth web application, enable the Gmail API, and register this exact redirect URI: `<APP_URL>/api/admin/mailbox/oauth/google/callback`. Grant the `gmail.send`, `openid`, and `email` scopes. Google's OAuth consent/verification rules apply; while the consent screen is in testing, add the mailbox account as a test user.
+
+For Microsoft, register a web application in Microsoft Entra ID and use `<APP_URL>/api/admin/mailbox/oauth/microsoft/callback` as its redirect URI. Configure delegated `User.Read` and `Mail.Send` permissions and allow the account types you intend to use.
+
+After setting the secrets, redeploy/restart the service, sign in to the admin panel, open **Website inquiries**, and connect each mailbox using its button. OAuth refresh tokens are encrypted before storage in PostgreSQL. The app only sends copies when an administrator explicitly clicks **Send copy to Gmail** or **Send copy to Outlook**.
+
+The inbox and mailbox integration described here are in the deployed Northflank source. An older local project copy may need to be synchronized before it exposes the same admin features.

@@ -35,12 +35,14 @@ import {
   Info,
   Sliders,
   Activity,
-  LogOut
+  LogOut,
+  Inbox
 } from 'lucide-react';
 import { PromotionalCampaign, AiKnowledgeDoc } from '../types';
 import { AdminAnalyticsDashboard } from '../components/AdminAnalyticsDashboard';
 import { AdminRoomsManager } from '../components/admin/AdminRoomsManager';
 import { AdminGuestsManager } from '../components/admin/AdminGuestsManager';
+import { AdminInquiriesManager } from '../components/admin/AdminInquiriesManager';
 import { AdminLiveChatManager } from '../components/admin/AdminLiveChatManager';
 import { AdminCmsManager } from '../components/admin/AdminCmsManager';
 import { AdminDiscountsManager } from '../components/admin/AdminDiscountsManager';
@@ -59,7 +61,7 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Tab
-  const [activeTab, setActiveTab] = useState<'cms' | 'controls' | 'discounts' | 'analytics' | 'rooms' | 'live-chat' | 'guests' | 'campaigns' | 'reservations' | 'knowledge'>('cms');
+  const [activeTab, setActiveTab] = useState<'cms' | 'controls' | 'discounts' | 'analytics' | 'rooms' | 'live-chat' | 'guests' | 'inquiries' | 'campaigns' | 'reservations' | 'knowledge'>('cms');
 
   // Campaigns state
   const [campaigns, setCampaigns] = useState<PromotionalCampaign[]>([]);
@@ -645,6 +647,17 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
             <span>{adminText(lang, 'Stali Goście & Odznaki')}</span>
           </button>
           <button
+            onClick={() => setActiveTab('inquiries')}
+            className={`pb-3 px-2 text-sm font-bold flex items-center space-x-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'inquiries'
+                ? 'border-[#1E3A2B] text-[#1E3A2B]'
+                : 'border-transparent text-neutral-500 hover:text-neutral-900'
+            }`}
+          >
+            <Inbox className="w-4 h-4 text-emerald-700" />
+            <span>Website inquiries</span>
+          </button>
+          <button
             onClick={() => setActiveTab('analytics')}
             className={`pb-3 px-2 text-sm font-bold flex items-center space-x-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'analytics'
@@ -990,6 +1003,10 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
         {/* TAB: FREQUENT GUESTS, BADGES & COMMUNICATION */}
         {activeTab === 'guests' && (
           <AdminGuestsManager />
+        )}
+
+        {activeTab === 'inquiries' && (
+          <AdminInquiriesManager />
         )}
 
         {/* TAB 0: REAL-TIME VISITOR ANALYTICS */}
