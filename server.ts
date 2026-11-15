@@ -67,6 +67,7 @@ import { requireAdminAuth, handleAdminLogin } from "./server/adminAuth.ts";
 import { getSiteSettings, SiteSettingsValidationError, updateSiteSettings } from "./server/siteSettings.ts";
 import { chatRateLimiter, bookingRateLimiter, contactInquiryRateLimiter, adminLoginRateLimiter } from "./server/rateLimiters.ts";
 import { logger, requestLoggingMiddleware } from "./server/logger.ts";
+import { createReadinessHandler } from "./server/readiness.ts";
 import { db } from "./src/db/index.ts";
 import { initializeDatabase } from "./server/bootstrap.ts";
 
@@ -374,6 +375,8 @@ async function startServer() {
       timestamp: new Date().toISOString()
     });
   });
+
+  app.get("/api/ready", createReadinessHandler(() => db.execute(sql`SELECT 1`)));
 
   // User management endpoints secured with Firebase Auth & Cloud SQL
   app.get("/api/users", requireAuth, async (_req: AuthRequest, res) => {
