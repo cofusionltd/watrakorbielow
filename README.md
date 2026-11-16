@@ -56,6 +56,6 @@ The local configuration in `.env.example` uses database `watra` on `127.0.0.1:54
 3. Select an image, or use **Edytuj** on its tile to select it in the editor.
 4. Choose a replacement from the image selector, or use **Wgraj zdjęcie** to upload an image. Uploaded image bytes are stored in the `media_assets` table.
 5. Choose **Zamień zdjęcie**, then **Zapisz w CMS** to publish the change. The image mapping is stored with the CMS content in PostgreSQL.
-6. Use **Usuń ze strony** to hide an image without deleting it, and **Przywróć** to undo that. Uploaded files can be deleted from the library when no page, room, or campaign uses them.
+6. Use **Usuń ze strony** to hide an image without deleting it; hiding and restoring an image are saved immediately. Uploaded files can be deleted from the library when no page, room, or campaign uses them.
 
 Changes to room photos can also be made in the admin **Pokoje** manager. Uploaded files and replacement mappings are served from PostgreSQL, not from local image-file writes.
