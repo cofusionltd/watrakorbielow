@@ -43,6 +43,8 @@ import {
   handleUpsertGuest,
   handleUpdateGuestBadges,
   handleGetGuestMessages,
+  handleSetGuestMessageArchived,
+  handleDeleteGuestMessage,
   handleSendGuestMessage,
   handleGetMyGuestMessages,
   handleSubmitContactInquiry,
@@ -1571,6 +1573,8 @@ async function startServer() {
   app.post("/api/admin/guests", handleUpsertGuest);
   app.put("/api/admin/guests/:id/badges", handleUpdateGuestBadges);
   app.get("/api/admin/guests/:email/messages", handleGetGuestMessages);
+  app.patch("/api/admin/guests/:email/messages/:id/archive", handleSetGuestMessageArchived);
+  app.delete("/api/admin/guests/:email/messages/:id", handleDeleteGuestMessage);
   app.post("/api/admin/guests/:email/messages", handleSendGuestMessage);
   app.get("/api/admin/inquiries", handleGetContactInquiries);
   app.patch("/api/admin/inquiries/:id/read", handleUpdateContactInquiryRead);

@@ -1,0 +1,1 @@
+ALTER TABLE "guest_messages" ADD COLUMN "is_archived" boolean DEFAULT false NOT NULL;

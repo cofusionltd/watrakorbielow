@@ -5,6 +5,8 @@ import {
   dbUpsertGuestProfile,
   dbGetGuestMessages,
   dbCreateGuestMessage,
+  dbSetGuestMessageArchived,
+  dbDeleteGuestMessage,
   dbCreateContactInquiry,
   dbDeleteContactInquiry,
   dbGetContactInquiries,
@@ -34,6 +36,7 @@ export interface GuestMessageData {
   promoDiscount?: number;
   promoCode?: string;
   isRead: boolean;
+  isArchived: boolean;
   createdAt: string;
 }
 
@@ -68,6 +71,7 @@ function mapDbRowToMessage(row: any): GuestMessageData {
     promoDiscount: row.promoDiscount ?? row.promo_discount ?? undefined,
     promoCode: row.promoCode ?? row.promo_code ?? undefined,
     isRead: Boolean(row.isRead ?? row.is_read),
+    isArchived: Boolean(row.isArchived ?? row.is_archived),
     createdAt: new Date(row.createdAt ?? row.created_at).toISOString(),
   };
 }
@@ -256,6 +260,36 @@ export async function handleGetGuestMessages(req: Request, res: Response) {
   } catch (error) {
     console.error('Could not load guest messages:', error);
     return res.status(503).json({ error: 'Nie udało się pobrać wiadomości dla gościa.' });
+  }
+}
+
+export async function handleSetGuestMessageArchived(req: Request, res: Response) {
+  const guestEmail = decodeURIComponent(req.params.email).trim().toLowerCase();
+  const { isArchived } = req.body ?? {};
+  if (typeof isArchived !== 'boolean') {
+    return res.status(400).json({ error: 'isArchived must be a boolean.' });
+  }
+
+  try {
+    const row = await dbSetGuestMessageArchived(req.params.id, guestEmail, isArchived);
+    if (!row) return res.status(404).json({ error: 'Wiadomość nie istnieje.' });
+    return res.json({ success: true, message: mapDbRowToMessage(row) });
+  } catch (error) {
+    console.error('Could not update guest message archive status:', error);
+    return res.status(503).json({ error: 'Nie udało się zaktualizować archiwum wiadomości.' });
+  }
+}
+
+export async function handleDeleteGuestMessage(req: Request, res: Response) {
+  const guestEmail = decodeURIComponent(req.params.email).trim().toLowerCase();
+
+  try {
+    const deleted = await dbDeleteGuestMessage(req.params.id, guestEmail);
+    if (!deleted) return res.status(404).json({ error: 'Wiadomość nie istnieje.' });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Could not delete guest message:', error);
+    return res.status(503).json({ error: 'Nie udało się usunąć wiadomości.' });
   }
 }
 

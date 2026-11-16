@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Check, ExternalLink, Inbox, Mail, MailOpen, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertCircle, Archive, Check, ExternalLink, Inbox, Mail, MailOpen, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { adminFetch } from '../../lib/adminApi';
 
 interface ContactInquiry {
@@ -8,6 +8,7 @@ interface ContactInquiry {
   senderName: string;
   message: string;
   isRead: boolean;
+  isArchived: boolean;
   createdAt: string;
 }
 
@@ -36,6 +37,7 @@ export const AdminInquiriesManager: React.FC = () => {
     microsoft: { configured: false, connected: false },
   });
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [showArchivedOnly, setShowArchivedOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -127,6 +129,31 @@ export const AdminInquiriesManager: React.FC = () => {
     }
   };
 
+  const archiveInquiry = async (inquiry: ContactInquiry) => {
+    setPendingId(inquiry.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await adminFetch(
+        `/api/admin/guests/${encodeURIComponent(inquiry.guestEmail)}/messages/${encodeURIComponent(inquiry.id)}/archive`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isArchived: !inquiry.isArchived }),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(getErrorMessage(data, 'Could not archive inquiry.'));
+      setInquiries(current => current.map(item => item.id === inquiry.id ? data.message : item));
+      setNotice(inquiry.isArchived ? 'Inquiry restored from archive.' : 'Inquiry archived.');
+    } catch (actionError) {
+      console.error('Could not archive inquiry:', actionError);
+      setError(actionError instanceof Error ? actionError.message : 'Could not archive inquiry.');
+    } finally {
+      setPendingId(null);
+    }
+  };
+
   const connectMailbox = async (provider: MailboxProvider) => {
     const popup = window.open('about:blank', 'watra-mailbox-connect', 'width=600,height=720');
     if (!popup) {
@@ -184,8 +211,11 @@ export const AdminInquiriesManager: React.FC = () => {
     }
   };
 
-  const visibleInquiries = showUnreadOnly ? inquiries.filter(inquiry => !inquiry.isRead) : inquiries;
-  const unreadCount = inquiries.filter(inquiry => !inquiry.isRead).length;
+  const visibleInquiries = inquiries.filter(inquiry =>
+    inquiry.isArchived === showArchivedOnly && (!showUnreadOnly || !inquiry.isRead)
+  );
+  const activeInquiries = inquiries.filter(inquiry => !inquiry.isArchived);
+  const unreadCount = activeInquiries.filter(inquiry => !inquiry.isRead).length;
 
   return (
     <section className="space-y-5">
@@ -196,10 +226,28 @@ export const AdminInquiriesManager: React.FC = () => {
             Website inquiries
           </h2>
           <p className="mt-1 text-sm text-stone-600">
-            {inquiries.length} total · {unreadCount} unread
+            {activeInquiries.length} active · {unreadCount} unread · {inquiries.length - activeInquiries.length} archived
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowArchivedOnly(false)}
+            className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+              !showArchivedOnly ? 'bg-[#1E3A2B] text-white' : 'border border-stone-300 text-stone-700 hover:bg-stone-50'
+            }`}
+          >
+            Active
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowArchivedOnly(true)}
+            className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+              showArchivedOnly ? 'bg-[#1E3A2B] text-white' : 'border border-stone-300 text-stone-700 hover:bg-stone-50'
+            }`}
+          >
+            Archived
+          </button>
           <label className="flex items-center gap-2 text-sm text-stone-700">
             <input
               type="checkbox"
@@ -271,7 +319,7 @@ export const AdminInquiriesManager: React.FC = () => {
         <p className="py-12 text-center text-sm text-stone-500">Loading inquiries…</p>
       ) : visibleInquiries.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stone-300 bg-white p-12 text-center text-sm text-stone-500">
-          {showUnreadOnly ? 'No unread inquiries.' : 'No contact-form inquiries have been received.'}
+          {showArchivedOnly ? 'No archived inquiries.' : showUnreadOnly ? 'No unread inquiries.' : 'No contact-form inquiries have been received.'}
         </div>
       ) : (
         <div className="space-y-3">
@@ -325,6 +373,15 @@ export const AdminInquiriesManager: React.FC = () => {
                   >
                     {inquiry.isRead ? <MailOpen className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                     Mark {inquiry.isRead ? 'unread' : 'read'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void archiveInquiry(inquiry)}
+                    disabled={pendingId === inquiry.id}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 px-3 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-50"
+                  >
+                    {inquiry.isArchived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                    {inquiry.isArchived ? 'Restore' : 'Archive'}
                   </button>
                   <button
                     type="button"

@@ -91,6 +91,7 @@ export const guestMessages = pgTable('guest_messages', {
   promoDiscount: integer('promo_discount'),
   promoCode: text('promo_code'),
   isRead: boolean('is_read').notNull().default(false),
+  isArchived: boolean('is_archived').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => ({
   emailIdx: index('idx_guest_messages_email').on(table.guestEmail),
