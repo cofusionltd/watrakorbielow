@@ -34,6 +34,16 @@ interface CmsMediaAsset {
   url: string;
 }
 
+const MAX_IMAGE_UPLOAD_BYTES = 35 * 1024 * 1024;
+const SUPPORTED_IMAGE_TYPES = new Set([
+  'image/avif',
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/svg+xml',
+  'image/webp',
+]);
+
 const containsMediaUrl = (value: unknown, url: string): boolean => {
   if (value === url) return true;
   if (Array.isArray(value)) return value.some(item => containsMediaUrl(item, url));
@@ -154,10 +164,15 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
     if (!file) return;
 
     setUploadingImage(true);
+    setMediaError(null);
+    setMediaNotice(null);
 
     try {
-      if (!file.type.startsWith('image/')) {
-        throw new Error(adminText(lang, 'Wybierz prawidłowy plik obrazu.'));
+      if (!SUPPORTED_IMAGE_TYPES.has(file.type)) {
+        throw new Error(adminText(lang, 'Obsługiwane formaty zdjęć to AVIF, GIF, JPG, PNG, SVG i WebP.'));
+      }
+      if (file.size === 0 || file.size > MAX_IMAGE_UPLOAD_BYTES) {
+        throw new Error(adminText(lang, 'Plik jest pusty albo przekracza limit 35 MB.'));
       }
       const imageData = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -172,25 +187,23 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageData, fileName: file.name }),
       });
-      if (res.ok) {
-        const json = await res.json();
-        callback(json.url);
-      } else {
-        const error = await res.json();
-        console.error('Image upload failed:', error);
-        throw new Error(adminText(lang, 'Błąd podczas przesyłania zdjęcia.'));
+      const result = await res.json();
+      if (!res.ok) {
+        console.error('Image upload failed:', result);
+        throw new Error(typeof result.error === 'string'
+          ? result.error
+          : adminText(lang, 'Błąd podczas przesyłania zdjęcia.'));
       }
+      if (typeof result.url !== 'string' || !result.url.startsWith('/images/')) {
+        throw new Error(adminText(lang, 'Serwer zwrócił nieprawidłowy adres zdjęcia.'));
+      }
+      callback(result.url);
+      setMediaNotice(adminText(lang, 'Zdjęcie dodano do biblioteki. Wybierz je i kliknij „Zamień zdjęcie”, aby od razu podmienić wybrane zdjęcie na stronie.'));
     } catch (err) {
-      const localizedErrors = [
-        adminText(lang, 'Wybierz prawidłowy plik obrazu.'),
-        adminText(lang, 'Nie udało się odczytać obrazu.'),
-        adminText(lang, 'Błąd podczas przesyłania zdjęcia.'),
-      ];
-      const message = err instanceof Error && localizedErrors.includes(err.message)
-        ? err.message
-        : adminText(lang, 'Błąd sieci podczas wgrywania pliku.');
       console.error('Image upload failed:', err);
-      alert(message);
+      setMediaError(err instanceof Error
+        ? err.message
+        : adminText(lang, 'Błąd sieci podczas wgrywania pliku.'));
     } finally {
       setUploadingImage(false);
       e.target.value = '';
@@ -211,18 +224,21 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
     });
   };
 
-  const handleReplaceImage = () => {
+  const handleReplaceImage = async () => {
     if (!selectedImageSource || !replacementImage) return;
-    setFormData(previous => {
-      const imageOverrides = { ...previous.imageOverrides };
-      if (replacementImage === selectedImageSource) {
-        delete imageOverrides[selectedImageSource];
-      } else {
-        imageOverrides[selectedImageSource] = replacementImage;
-      }
-      return { ...previous, imageOverrides };
-    });
-    setMediaNotice(adminText(lang, 'Zmiany zdjęć zapisują się po kliknięciu „Zapisz w CMS”. Podmiana dotyczy wszystkich miejsc używających tego pliku.'));
+    const previousImageOverrides = formData.imageOverrides;
+    const imageOverrides = { ...formData.imageOverrides };
+    if (replacementImage === selectedImageSource) {
+      delete imageOverrides[selectedImageSource];
+    } else {
+      imageOverrides[selectedImageSource] = replacementImage;
+    }
+    setFormData(previous => ({ ...previous, imageOverrides }));
+    if (await persistImageOverrides(imageOverrides)) {
+      setMediaNotice(adminText(lang, 'Zdjęcie zostało podmienione na stronie.'));
+    } else {
+      setFormData(previous => ({ ...previous, imageOverrides: previousImageOverrides }));
+    }
   };
 
   const handleRemoveImageFromSite = async () => {
@@ -1277,7 +1293,7 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
           <div className="space-y-6">
             <div className="border-b border-neutral-100 pb-4">
               <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Biblioteka zdjęć strony')}</h3>
-              <p className="text-xs text-neutral-500">{adminText(lang, 'Usunięcie i przywrócenie zdjęcia zapisuje się od razu. Podmiana zdjęcia wymaga kliknięcia „Zapisz w CMS” i dotyczy wszystkich miejsc używających tego pliku.')}</p>
+              <p className="text-xs text-neutral-500">{adminText(lang, 'Wgraj zdjęcie z komputera, wybierz zdjęcie do podmiany i kliknij „Zamień zdjęcie”. Podmiana, usunięcie i przywrócenie zapisują się od razu.')}</p>
               <p className="mt-1 text-xs text-neutral-500">{adminText(lang, 'Możesz też usunąć obraz ze strony. Przesłane pliki można trwale skasować, jeśli nie są używane.')}</p>
             </div>
             {mediaError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{mediaError}</p>}
@@ -1330,11 +1346,11 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={handleReplaceImage}
-                    disabled={!selectedImageSource || !replacementImage || uploadingImage}
+                    onClick={() => void handleReplaceImage()}
+                    disabled={!selectedImageSource || !replacementImage || uploadingImage || savingImageChanges}
                     className="rounded-lg bg-[#1E3A2B] px-3 py-2 text-xs font-semibold text-white hover:bg-[#2A4F3B] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {adminText(lang, 'Zamień zdjęcie')}
+                    {savingImageChanges ? adminText(lang, 'Zapisywanie...') : adminText(lang, 'Zamień zdjęcie')}
                   </button>
                   <label className={`cursor-pointer rounded-lg border border-neutral-300 px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 ${uploadingImage ? 'pointer-events-none opacity-50' : ''}`}>
                     <Upload className="mr-1 inline h-4 w-4" />
@@ -1346,15 +1362,8 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
                       className="sr-only"
                       onChange={event => handleUpload(event, url => {
                         const name = url.split('/').pop() || url;
-                        if (selectedImageSource) {
-                          setFormData(previous => ({
-                            ...previous,
-                            imageOverrides: { ...previous.imageOverrides, [selectedImageSource]: url },
-                          }));
-                          setReplacementImage(url);
-                        }
-                        setMediaAssets(previous => [...previous, { name, url }]);
-                        setMediaNotice(adminText(lang, 'Zmiany zdjęć zapisują się po kliknięciu „Zapisz w CMS”. Podmiana dotyczy wszystkich miejsc używających tego pliku.'));
+                        setMediaAssets(previous => [ ...previous.filter(asset => asset.url !== url), { name, url } ]);
+                        setReplacementImage(url);
                       })}
                     />
                   </label>
