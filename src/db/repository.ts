@@ -180,6 +180,31 @@ export async function dbGetGuestMessages(guestEmail?: string) {
   }
 }
 
+export async function dbSetGuestMessageArchived(id: string, guestEmail: string, isArchived: boolean) {
+  try {
+    const [updated] = await db.update(guestMessages)
+      .set({ isArchived })
+      .where(and(eq(guestMessages.id, id), eq(guestMessages.guestEmail, guestEmail)))
+      .returning();
+    return updated || null;
+  } catch (error) {
+    console.error('dbSetGuestMessageArchived error:', error);
+    throw new Error('Nie udało się zarchiwizować wiadomości gościa', { cause: error });
+  }
+}
+
+export async function dbDeleteGuestMessage(id: string, guestEmail: string) {
+  try {
+    const [deleted] = await db.delete(guestMessages)
+      .where(and(eq(guestMessages.id, id), eq(guestMessages.guestEmail, guestEmail)))
+      .returning({ id: guestMessages.id });
+    return Boolean(deleted);
+  } catch (error) {
+    console.error('dbDeleteGuestMessage error:', error);
+    throw new Error('Nie udało się usunąć wiadomości gościa', { cause: error });
+  }
+}
+
 const contactInquiryCondition = or(
   eq(guestMessages.type, 'inquiry'),
   like(guestMessages.message, 'Telefon:%'),

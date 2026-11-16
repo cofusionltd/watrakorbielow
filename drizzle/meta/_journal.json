@@ -15,6 +15,13 @@
       "when": 1794780144019,
       "tag": "0001_plain_harrier",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794788176305,
+      "tag": "0002_luxuriant_loners",
+      "breakpoints": true
     }
   ]
 }

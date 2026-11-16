@@ -62,11 +62,19 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [savingImageChanges, setSavingImageChanges] = useState(false);
   const imageEditorRef = useRef<HTMLDivElement>(null);
   const replacementSelectRef = useRef<HTMLSelectElement>(null);
+  const pendingImageSaveFormDataRef = useRef<SiteCmsContent | null>(null);
 
   // Sync if content changes from server
   React.useEffect(() => {
+    const pendingFormData = pendingImageSaveFormDataRef.current;
+    if (pendingFormData) {
+      pendingImageSaveFormDataRef.current = null;
+      setFormData({ ...pendingFormData, imageOverrides: content.imageOverrides });
+      return;
+    }
     setFormData(content);
   }, [content]);
 
@@ -217,26 +225,61 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
     setMediaNotice(adminText(lang, 'Zmiany zdjęć zapisują się po kliknięciu „Zapisz w CMS”. Podmiana dotyczy wszystkich miejsc używających tego pliku.'));
   };
 
-  const handleRemoveImageFromSite = () => {
+  const handleRemoveImageFromSite = async () => {
     if (!selectedImageSource) return;
-    if (!window.confirm(adminText(lang, 'Czy usunąć to zdjęcie ze strony we wszystkich miejscach, w których jest używane? Możesz je przywrócić przed zapisaniem zmian.'))) return;
-    setFormData(previous => ({
-      ...previous,
-      imageOverrides: { ...previous.imageOverrides, [selectedImageSource]: CMS_IMAGE_REMOVED },
-    }));
+    if (!window.confirm(adminText(lang, 'Czy usunąć to zdjęcie ze strony we wszystkich miejscach, w których jest używane?'))) return;
+    const previousImageOverrides = formData.imageOverrides;
+    const previousReplacementImage = replacementImage;
+    const imageOverrides = { ...formData.imageOverrides, [selectedImageSource]: CMS_IMAGE_REMOVED };
+    setFormData(previous => ({ ...previous, imageOverrides }));
     setReplacementImage('');
-    setMediaNotice(adminText(lang, 'Zdjęcie jest ukryte na stronie. Zapisz zmiany w CMS, aby je opublikować.'));
+    if (await persistImageOverrides(imageOverrides)) {
+      setMediaNotice(adminText(lang, 'Zdjęcie zostało usunięte ze strony.'));
+    } else {
+      setFormData(previous => ({ ...previous, imageOverrides: previousImageOverrides }));
+      setReplacementImage(previousReplacementImage);
+    }
   };
 
-  const handleRestoreImage = () => {
+  const handleRestoreImage = async () => {
     if (!selectedImageSource) return;
-    setFormData(previous => {
-      const imageOverrides = { ...previous.imageOverrides };
-      delete imageOverrides[selectedImageSource];
-      return { ...previous, imageOverrides };
-    });
+    const previousImageOverrides = formData.imageOverrides;
+    const previousReplacementImage = replacementImage;
+    const imageOverrides = { ...formData.imageOverrides };
+    delete imageOverrides[selectedImageSource];
+    setFormData(previous => ({ ...previous, imageOverrides }));
     setReplacementImage('');
-    setMediaNotice(adminText(lang, 'Zmiany zdjęć zapisują się po kliknięciu „Zapisz w CMS”. Podmiana dotyczy wszystkich miejsc używających tego pliku.'));
+    if (await persistImageOverrides(imageOverrides)) {
+      setMediaNotice(adminText(lang, 'Zdjęcie zostało przywrócone na stronie.'));
+    } else {
+      setFormData(previous => ({ ...previous, imageOverrides: previousImageOverrides }));
+      setReplacementImage(previousReplacementImage);
+    }
+  };
+
+  const persistImageOverrides = async (imageOverrides: Record<string, string>) => {
+    pendingImageSaveFormDataRef.current = { ...formData, imageOverrides };
+    setSavingImageChanges(true);
+    setMediaError(null);
+    setMediaNotice(null);
+    try {
+      const result = await updateCmsContent({ imageOverrides });
+      if (!result.success) {
+        pendingImageSaveFormDataRef.current = null;
+        console.error('Failed to save CMS image changes:', result.message);
+        setMediaError(adminText(lang, 'Nie udało się zapisać zmiany zdjęcia. Spróbuj ponownie.'));
+        return false;
+      }
+      setFormData(previous => ({ ...previous, imageOverrides }));
+      return true;
+    } catch (error) {
+      pendingImageSaveFormDataRef.current = null;
+      console.error('Failed to save CMS image changes:', error);
+      setMediaError(adminText(lang, 'Nie udało się zapisać zmiany zdjęcia. Spróbuj ponownie.'));
+      return false;
+    } finally {
+      setSavingImageChanges(false);
+    }
   };
 
   const handleDeleteUploadedImage = async (asset: CmsMediaAsset) => {
@@ -379,7 +422,7 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
 
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || savingImageChanges}
             className="flex items-center space-x-2 bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg transition-colors cursor-pointer"
           >
             {saving ? (
@@ -1234,7 +1277,7 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
           <div className="space-y-6">
             <div className="border-b border-neutral-100 pb-4">
               <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Biblioteka zdjęć strony')}</h3>
-              <p className="text-xs text-neutral-500">{adminText(lang, 'Zmiany zdjęć zapisują się po kliknięciu „Zapisz w CMS”. Podmiana dotyczy wszystkich miejsc używających tego pliku.')}</p>
+              <p className="text-xs text-neutral-500">{adminText(lang, 'Usunięcie i przywrócenie zdjęcia zapisuje się od razu. Podmiana zdjęcia wymaga kliknięcia „Zapisz w CMS” i dotyczy wszystkich miejsc używających tego pliku.')}</p>
               <p className="mt-1 text-xs text-neutral-500">{adminText(lang, 'Możesz też usunąć obraz ze strony. Przesłane pliki można trwale skasować, jeśli nie są używane.')}</p>
             </div>
             {mediaError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{mediaError}</p>}
@@ -1259,7 +1302,7 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
                   formData.imageOverrides?.[selectedImageSource] === CMS_IMAGE_REMOVED
                     ? <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 text-neutral-500">
                         <ImageOff className="h-8 w-8" />
-                        <span>{adminText(lang, 'Zdjęcie jest ukryte na stronie. Zapisz zmiany w CMS, aby je opublikować.')}</span>
+                        <span>{adminText(lang, 'Zdjęcie jest ukryte na stronie.')}</span>
                       </div>
                     : <div className="overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
                         <img
@@ -1320,19 +1363,21 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
                   {selectedImageSource && formData.imageOverrides?.[selectedImageSource] !== CMS_IMAGE_REMOVED && (
                     <button
                       type="button"
-                      onClick={handleRemoveImageFromSite}
+                      onClick={() => void handleRemoveImageFromSite()}
+                      disabled={savingImageChanges}
                       className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
                     >
-                      {adminText(lang, 'Usuń ze strony')}
+                      {savingImageChanges ? adminText(lang, 'Zapisywanie...') : adminText(lang, 'Usuń ze strony')}
                     </button>
                   )}
                   {selectedImageSource && formData.imageOverrides?.[selectedImageSource] && (
                     <button
                       type="button"
-                      onClick={handleRestoreImage}
+                      onClick={() => void handleRestoreImage()}
+                      disabled={savingImageChanges}
                       className="rounded-lg border border-neutral-300 px-3 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
                     >
-                      {adminText(lang, 'Przywróć zdjęcie')}
+                      {savingImageChanges ? adminText(lang, 'Zapisywanie...') : adminText(lang, 'Przywróć zdjęcie')}
                     </button>
                   )}
                 </div>

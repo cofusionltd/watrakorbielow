@@ -49,6 +49,7 @@ export interface GuestMessage {
   promoDiscount?: number;
   promoCode?: string;
   isRead: boolean;
+  isArchived: boolean;
   createdAt: string;
 }
 

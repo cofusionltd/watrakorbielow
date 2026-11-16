@@ -17,7 +17,10 @@ import {
   Sparkles,
   ChevronRight,
   Clock,
-  X
+  X,
+  Archive,
+  RotateCcw,
+  Trash2
 } from 'lucide-react';
 import { GuestProfile, GuestMessage } from '../../types';
 import { adminFetch } from '../../lib/adminApi';
@@ -44,6 +47,8 @@ export const AdminGuestsManager: React.FC = () => {
   const [selectedGuest, setSelectedGuest] = useState<GuestProfile | null>(null);
   const [guestMessages, setGuestMessages] = useState<GuestMessage[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [showArchivedMessages, setShowArchivedMessages] = useState(false);
+  const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
 
   // Modals
   const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
@@ -158,6 +163,58 @@ export const AdminGuestsManager: React.FC = () => {
       }
     } catch (err: any) {
       setError(err.message || 'Błąd zapisu odznak.');
+    }
+  };
+
+  const handleArchiveMessage = async (message: GuestMessage) => {
+    if (!selectedGuest || pendingMessageId) return;
+    setPendingMessageId(message.id);
+    setError(null);
+    setSuccessNotice(null);
+    try {
+      const response = await adminFetch(
+        `/api/admin/guests/${encodeURIComponent(selectedGuest.email)}/messages/${encodeURIComponent(message.id)}/archive`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isArchived: !message.isArchived })
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Nie udało się zaktualizować archiwum wiadomości.');
+
+      setGuestMessages(current => current.map(item => item.id === message.id ? data.message : item));
+      setSuccessNotice(message.isArchived ? 'Przywrócono wiadomość z archiwum.' : 'Zarchiwizowano wiadomość.');
+    } catch (err) {
+      console.error('Failed to archive guest message:', err);
+      setError(err instanceof Error ? err.message : 'Nie udało się zaktualizować archiwum wiadomości.');
+    } finally {
+      setPendingMessageId(null);
+    }
+  };
+
+  const handleDeleteMessage = async (message: GuestMessage) => {
+    if (!selectedGuest || pendingMessageId) return;
+    if (!window.confirm('Czy na pewno chcesz trwale usunąć tę wiadomość? Tej operacji nie można cofnąć.')) return;
+
+    setPendingMessageId(message.id);
+    setError(null);
+    setSuccessNotice(null);
+    try {
+      const response = await adminFetch(
+        `/api/admin/guests/${encodeURIComponent(selectedGuest.email)}/messages/${encodeURIComponent(message.id)}`,
+        { method: 'DELETE' }
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Nie udało się usunąć wiadomości.');
+
+      setGuestMessages(current => current.filter(item => item.id !== message.id));
+      setSuccessNotice('Wiadomość została trwale usunięta.');
+    } catch (err) {
+      console.error('Failed to delete guest message:', err);
+      setError(err instanceof Error ? err.message : 'Nie udało się usunąć wiadomości.');
+    } finally {
+      setPendingMessageId(null);
     }
   };
 
@@ -413,14 +470,38 @@ export const AdminGuestsManager: React.FC = () => {
                   </button>
                 </div>
 
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowArchivedMessages(false)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                      !showArchivedMessages ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    }`}
+                  >
+                    Wiadomości ({guestMessages.filter(message => !message.isArchived).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowArchivedMessages(true)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                      showArchivedMessages ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    }`}
+                  >
+                    Archiwum ({guestMessages.filter(message => message.isArchived).length})
+                  </button>
+                </div>
+
                 <div className="bg-stone-50 rounded-2xl border border-stone-200 p-4 min-h-[220px] max-h-[340px] overflow-y-auto space-y-3">
                   {isLoadingMessages ? (
                     <div className="text-center py-8 text-xs text-stone-400">Ładowanie wiadomości...</div>
-                  ) : guestMessages.length === 0 ? (
+                  ) : guestMessages.filter(message => message.isArchived === showArchivedMessages).length === 0 ? (
                     <div className="text-center py-10 space-y-2">
                       <Bell className="w-8 h-8 text-stone-300 mx-auto" />
-                      <p className="text-xs text-stone-500">Brak historii wiadomości z tym gościem.</p>
+                      <p className="text-xs text-stone-500">
+                        {showArchivedMessages ? 'Archiwum jest puste.' : 'Brak historii wiadomości z tym gościem.'}
+                      </p>
                       <button
+                        type="button"
                         onClick={() => {
                           setMessageType('promo');
                           setIsMessageModalOpen(true);
@@ -431,7 +512,7 @@ export const AdminGuestsManager: React.FC = () => {
                       </button>
                     </div>
                   ) : (
-                    guestMessages.map((msg) => (
+                    guestMessages.filter(message => message.isArchived === showArchivedMessages).map((msg) => (
                       <div
                         key={msg.id}
                         className={`p-3.5 rounded-xl text-xs space-y-1.5 border shadow-2xs ${
@@ -442,12 +523,37 @@ export const AdminGuestsManager: React.FC = () => {
                             : 'bg-white border-stone-200 text-stone-800'
                         }`}
                       >
-                        <div className="flex justify-between items-center text-[11px] font-medium text-stone-500">
+                        <div className="flex flex-wrap justify-between items-center gap-2 text-[11px] font-medium text-stone-500">
                           <span className="flex items-center gap-1 font-bold text-stone-700">
-                            {msg.type === 'promo' ? '🎁 Oferta Rabatowa' : msg.type === 'notification' ? '🔔 Powiadomienie' : '💬 Czat recepcji'}
+                            {msg.type === 'promo' ? '🎁 Oferta Rabatowa' : msg.type === 'notification' ? '🔔 Powiadomienie' : msg.type === 'inquiry' ? '✉️ Formularz kontaktowy' : '💬 Czat recepcji'}
                             {' • '} {msg.senderName}
+                            {msg.isArchived && <span className="ml-1 rounded bg-stone-200 px-1.5 py-0.5 text-[10px]">Archiwum</span>}
                           </span>
-                          <span>{new Date(msg.createdAt).toLocaleString('pl-PL')}</span>
+                          <div className="flex items-center gap-2">
+                            <span>{new Date(msg.createdAt).toLocaleString('pl-PL')}</span>
+                            <button
+                              type="button"
+                              onClick={() => void handleArchiveMessage(msg)}
+                              disabled={pendingMessageId !== null}
+                              aria-label={msg.isArchived ? 'Przywróć wiadomość z archiwum' : 'Zarchiwizuj wiadomość'}
+                              title={msg.isArchived ? 'Przywróć z archiwum' : 'Archiwizuj'}
+                              className="inline-flex items-center gap-1 rounded-md border border-stone-300 px-2 py-1 text-[10px] font-semibold text-stone-600 hover:bg-stone-100 disabled:opacity-50"
+                            >
+                              {msg.isArchived ? <RotateCcw className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                              {msg.isArchived ? 'Przywróć' : 'Archiwizuj'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteMessage(msg)}
+                              disabled={pendingMessageId !== null}
+                              aria-label="Usuń wiadomość"
+                              title="Usuń wiadomość trwale"
+                              className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Usuń
+                            </button>
+                          </div>
                         </div>
 
                         <p className="text-sm font-normal leading-relaxed">{msg.message}</p>
