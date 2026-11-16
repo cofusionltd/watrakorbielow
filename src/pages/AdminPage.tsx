@@ -51,6 +51,16 @@ import { adminFetch, getAdminToken, setAdminToken, clearAdminToken } from '../li
 import { Language } from '../types';
 import { adminText } from '../adminTranslations';
 
+const MAX_CAMPAIGN_IMAGE_SIZE = 35 * 1024 * 1024;
+const CAMPAIGN_IMAGE_TYPES = new Set([
+  'image/avif',
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/svg+xml',
+  'image/webp',
+]);
+
 export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
   // Server-authenticated admin session check
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -67,6 +77,8 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
   const [campaigns, setCampaigns] = useState<PromotionalCampaign[]>([]);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [campaignFormError, setCampaignFormError] = useState<string | null>(null);
+  const [isSavingCampaign, setIsSavingCampaign] = useState(false);
 
   // Custom uploaded images for campaigns
   const [customImages, setCustomImages] = useState<{ url: string; label: string }[]>([]);
@@ -96,6 +108,7 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
 
   // New Campaign Form State
   const [isCreating, setIsCreating] = useState(false);
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState('');
   const [formSubtitle, setFormSubtitle] = useState('');
   const [formBadge, setFormBadge] = useState('-15% Promocja Sezonowa');
@@ -121,6 +134,48 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
     { url: '/images/bilard-1.jpg', label: 'Bilard & Rekreacja' },
     { url: '/images/image-08.jpg', label: 'Letnie szlaki i zieleń' }
   ];
+
+  const resetCampaignForm = () => {
+    setEditingCampaignId(null);
+    setFormTitle('');
+    setFormSubtitle('');
+    setFormBadge('-15% Promocja Sezonowa');
+    setFormDiscount(15);
+    setFormPromoCode('BESKID15');
+    setFormStartDate(new Date().toISOString().split('T')[0]);
+    setFormEndDate('2027-03-31');
+    setFormCategory('winter');
+    setFormImageUrl('/images/image-13.jpg');
+    setFormDescription('');
+    setFormPerks('15% zniżki na pobyt\nDarmowy seans w jacuzzi pod gwiazdami\nKieliszek powitalnej nalewki w karczmie');
+    setCampaignFormError(null);
+    setImageUploadNotice(null);
+  };
+
+  const startCampaignEdit = (campaign: PromotionalCampaign) => {
+    setEditingCampaignId(campaign.id);
+    setFormTitle(campaign.title);
+    setFormSubtitle(campaign.subtitle);
+    setFormBadge(campaign.badge);
+    setFormDiscount(campaign.discountPercentage);
+    setFormPromoCode(campaign.promoCode);
+    setFormStartDate(campaign.startDate);
+    setFormEndDate(campaign.endDate);
+    setFormCategory(campaign.category);
+    setFormImageUrl(campaign.imageUrl);
+    setFormDescription(campaign.description);
+    setFormPerks(campaign.perks.join('\n'));
+    setCampaignFormError(null);
+    setImageUploadNotice(null);
+    if (campaign.imageUrl && !availableImages.some(image => image.url === campaign.imageUrl)) {
+      setCustomImages(previous => [
+        { url: campaign.imageUrl, label: `Obecne zdjęcie: ${campaign.title}` },
+        ...previous.filter(image => image.url !== campaign.imageUrl),
+      ]);
+    }
+    setIsCreating(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Fetch campaigns
   const fetchCampaigns = async () => {
@@ -193,47 +248,56 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
   }, [isAuthenticated]);
 
   // Image upload handler for campaigns
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploadingImage(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64Data = reader.result as string;
-      try {
-        const res = await adminFetch('/api/admin/upload-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageData: base64Data,
-            fileName: file.name
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const newImg = { url: data.url, label: `Wgrane: ${file.name.substring(0, 20)}` };
-          setCustomImages((prev) => [newImg, ...prev]);
-          setFormImageUrl(data.url);
-          setImageUploadNotice(`Zdjęcie "${file.name}" wgrane i wybrane pomyślnie!`);
-        } else {
-          // fallback to data url
-          const newImg = { url: base64Data, label: `Wgrane: ${file.name.substring(0, 20)}` };
-          setCustomImages((prev) => [newImg, ...prev]);
-          setFormImageUrl(base64Data);
-          setImageUploadNotice('Zdjęcie załadowane!');
-        }
-      } catch (err) {
-        const newImg = { url: base64Data, label: `Wgrane: ${file.name.substring(0, 20)}` };
-        setCustomImages((prev) => [newImg, ...prev]);
-        setFormImageUrl(base64Data);
-        setImageUploadNotice('Zdjęcie załadowane!');
-      } finally {
-        setIsUploadingImage(false);
-        setTimeout(() => setImageUploadNotice(null), 3500);
+    setCampaignFormError(null);
+    setImageUploadNotice(null);
+    try {
+      if (!CAMPAIGN_IMAGE_TYPES.has(file.type)) {
+        throw new Error('Obsługiwane formaty zdjęć to AVIF, GIF, JPG, PNG, SVG i WebP.');
       }
-    };
-    reader.readAsDataURL(file);
+      if (file.size === 0 || file.size > MAX_CAMPAIGN_IMAGE_SIZE) {
+        throw new Error('Plik jest pusty albo przekracza limit 35 MB.');
+      }
+
+      const imageData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string'
+          ? resolve(reader.result)
+          : reject(new Error('Nie udało się odczytać obrazu.'));
+        reader.onerror = () => reject(new Error('Nie udało się odczytać obrazu.'));
+        reader.readAsDataURL(file);
+      });
+      const response = await adminFetch('/api/admin/upload-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData, fileName: file.name }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Nie udało się przesłać zdjęcia.');
+      }
+      if (typeof result.url !== 'string' || !result.url.startsWith('/images/')) {
+        throw new Error('Serwer zwrócił nieprawidłowy adres zdjęcia.');
+      }
+
+      const newImage = {
+        url: result.url,
+        label: `Wgrane: ${file.name.substring(0, 20)}`,
+      };
+      setCustomImages(previous => [newImage, ...previous.filter(image => image.url !== result.url)]);
+      setFormImageUrl(result.url);
+      setImageUploadNotice(`Zdjęcie "${file.name}" wgrano i wybrano pomyślnie.`);
+    } catch (error) {
+      console.error('Campaign image upload failed:', error);
+      setCampaignFormError(error instanceof Error ? error.message : 'Błąd sieci podczas wgrywania zdjęcia.');
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = '';
+    }
   };
 
   // AI Knowledge File reader handler (.txt, .md, .doc, .csv, .json)
@@ -384,14 +448,20 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCampaignFormError(null);
     const perksArray = formPerks
       .split('\n')
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
 
+    setIsSavingCampaign(true);
     try {
-      const res = await adminFetch('/api/admin/campaigns', {
-        method: 'POST',
+      const res = await adminFetch(
+        editingCampaignId
+          ? `/api/admin/campaigns/${encodeURIComponent(editingCampaignId)}`
+          : '/api/admin/campaigns',
+        {
+        method: editingCampaignId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: formTitle,
@@ -408,18 +478,25 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
         })
       });
 
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || 'Nie udało się zapisać kampanii.');
+      }
+
       if (res.ok) {
-        setActionSuccess(`Kampania "${formTitle}" została pomyślnie opublikowana!`);
+        setActionSuccess(editingCampaignId
+          ? `Kampania "${formTitle}" została zaktualizowana.`
+          : `Kampania "${formTitle}" została pomyślnie opublikowana!`);
         setIsCreating(false);
-        // Reset form
-        setFormTitle('');
-        setFormSubtitle('');
-        setFormDescription('');
+        resetCampaignForm();
         fetchCampaigns();
         setTimeout(() => setActionSuccess(null), 4000);
       }
     } catch (err) {
-      console.error('Error creating campaign:', err);
+      console.error('Error saving campaign:', err);
+      setCampaignFormError(err instanceof Error ? err.message : 'Nie udało się zapisać kampanii.');
+    } finally {
+      setIsSavingCampaign(false);
     }
   };
 
@@ -553,7 +630,15 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
               <span>{adminText(lang, 'Odśwież')}</span>
             </button>
             <button
-              onClick={() => setIsCreating(!isCreating)}
+              onClick={() => {
+                if (isCreating) {
+                  setIsCreating(false);
+                  resetCampaignForm();
+                } else {
+                  resetCampaignForm();
+                  setIsCreating(true);
+                }
+              }}
               className="bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center space-x-1.5 shadow-md transition-colors cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
@@ -710,13 +795,21 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-5 h-5 text-[#D4A373]" />
                 <h3 className="font-serif text-xl font-bold text-[#1E3A2B]">
-                  Kreator Publikacji Kampanii Promocyjnej
+                  {editingCampaignId ? 'Edycja Kampanii Promocyjnej' : 'Kreator Publikacji Kampanii Promocyjnej'}
                 </h3>
               </div>
               <span className="text-xs text-neutral-500">
-                Opublikowana kampania pojawi się od razu na stronie głównej i w module pakiety
+                {editingCampaignId
+                  ? 'Zapisanie zmian zaktualizuje kampanię na stronie.'
+                  : 'Opublikowana kampania pojawi się od razu na stronie głównej i w module pakiety.'}
               </span>
             </div>
+
+            {campaignFormError && (
+              <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                {campaignFormError}
+              </p>
+            )}
 
             <form onSubmit={handleCreateCampaign} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -960,16 +1053,24 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
               <div className="flex justify-end space-x-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsCreating(false)}
+                  onClick={() => {
+                    setIsCreating(false);
+                    resetCampaignForm();
+                  }}
                   className="px-5 py-2.5 rounded-xl border border-neutral-300 text-xs font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors"
                 >
                   Anuluj
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#1E3A2B] hover:bg-[#2A4F3B] text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-colors cursor-pointer"
+                  disabled={isSavingCampaign || isUploadingImage}
+                  className="bg-[#1E3A2B] hover:bg-[#2A4F3B] disabled:opacity-60 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-colors cursor-pointer"
                 >
-                  Opublikuj Kampanię w Serwisie
+                  {isSavingCampaign
+                    ? 'Zapisywanie...'
+                    : isUploadingImage
+                      ? 'Wgrywanie zdjęcia...'
+                    : editingCampaignId ? 'Zapisz Zmiany Kampanii' : 'Opublikuj Kampanię w Serwisie'}
                 </button>
               </div>
             </form>
@@ -1017,13 +1118,27 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
         {/* TAB 1: CAMPAIGNS LIST */}
         {activeTab === 'campaigns' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="font-serif text-xl font-bold text-[#1E3A2B]">
-                Zarządzanie Opublikowanymi Kampaniami
-              </h2>
-              <span className="text-xs text-neutral-500">
-                Łącznie kampanii w bazie: {campaigns.length}
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-serif text-xl font-bold text-[#1E3A2B]">
+                  Zarządzanie Opublikowanymi Kampaniami
+                </h2>
+                <span className="text-xs text-neutral-500">
+                  Łącznie kampanii w bazie: {campaigns.length}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  resetCampaignForm();
+                  setIsCreating(true);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#1E3A2B] px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#2A4F3B]"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Nowa Kampania
+              </button>
             </div>
 
             {isLoadingCampaigns ? (
@@ -1113,6 +1228,15 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
                       </button>
 
                       <div className="flex items-center space-x-1">
+                        <button
+                          type="button"
+                          onClick={() => startCampaignEdit(camp)}
+                          className="p-1.5 text-neutral-500 hover:text-[#1E3A2B] rounded-lg hover:bg-white transition-colors"
+                          title="Edytuj kampanię"
+                          aria-label={`Edytuj kampanię ${camp.title}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleDeleteCampaign(camp.id)}
                           className="p-1.5 text-neutral-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
