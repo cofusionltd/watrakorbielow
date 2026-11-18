@@ -132,7 +132,7 @@ export const Hero: React.FC<HeroProps> = ({
   }, []);
 
   const heroImages = {
-    winter: "/images/banner-1.jpg",
+    winter: "/images/hero-winter.jpg",
     summer: "/images/banner-1.jpg",
   };
 
