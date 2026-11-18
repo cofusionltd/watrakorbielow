@@ -59,3 +59,7 @@ The local configuration in `.env.example` uses database `watra` on `127.0.0.1:54
 6. Use **Usuń ze strony** to hide an image without deleting it; hiding and restoring an image are saved immediately. Uploaded files can be deleted from the library when no page, room, or campaign uses them.
 
 Changes to room photos can also be made in the admin **Pokoje** manager. Uploaded files and replacement mappings are served from PostgreSQL, not from local image-file writes.
+
+## Customize page names
+
+In the admin panel, open **Widoczność stron i funkcji**. Edit any page name in the **Strony** list and move focus away from the field to save it. Custom names are stored in PostgreSQL and are shown in the public navigation and footer; clear a custom name to restore the normal translated label.
