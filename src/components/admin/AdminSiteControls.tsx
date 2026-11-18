@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle, LoaderCircle, Settings2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, LoaderCircle, Pencil, Settings2 } from 'lucide-react';
 import { useCms } from '../../context/CmsContext';
 import { adminText } from '../../adminTranslations';
 import {
@@ -19,14 +19,19 @@ export const AdminSiteControls: React.FC<AdminSiteControlsProps> = ({ lang }) =>
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ success: boolean; message: string } | null>(null);
   const [pageLabelDrafts, setPageLabelDrafts] = useState<Record<string, string>>({});
+  const [editingPageLabelKey, setEditingPageLabelKey] = useState<keyof SiteSettings['pages'] | null>(null);
 
   useEffect(() => {
-    setPageLabelDrafts(
-      Object.fromEntries(
-        Object.keys(SITE_PAGE_LABELS).map(key => [key, siteSettings.pageLabels[key as keyof SiteSettings['pages']] || ''])
-      )
-    );
-  }, [siteSettings.pageLabels]);
+    setPageLabelDrafts(previous => Object.fromEntries(
+      Object.keys(SITE_PAGE_LABELS).map(key => {
+        const pageKey = key as keyof SiteSettings['pages'];
+        const label = pageKey === editingPageLabelKey
+          ? previous[pageKey] ?? siteSettings.pageLabels[pageKey] ?? ''
+          : siteSettings.pageLabels[pageKey] || '';
+        return [pageKey, label];
+      })
+    ));
+  }, [editingPageLabelKey, siteSettings.pageLabels]);
 
   const saveToggle = async (
     section: keyof SiteSettings,
@@ -94,7 +99,6 @@ export const AdminSiteControls: React.FC<AdminSiteControlsProps> = ({ lang }) =>
   };
 
   const renderPageControl = (key: keyof SiteSettings['pages']) => {
-    const label = pageLabelDrafts[key] || adminText(lang, SITE_PAGE_LABELS[key]);
     const controlKey = `pages.${key}`;
     const labelSaving = savingKey === `pageLabels.${key}`;
     return (
@@ -102,17 +106,24 @@ export const AdminSiteControls: React.FC<AdminSiteControlsProps> = ({ lang }) =>
         key={controlKey}
         className="flex items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white px-4 py-3"
       >
-        <input
-          type="text"
-          value={pageLabelDrafts[key] || ''}
-          maxLength={60}
-          aria-label={`Nazwa strony: ${adminText(lang, SITE_PAGE_LABELS[key])}`}
-          placeholder={adminText(lang, SITE_PAGE_LABELS[key])}
-          disabled={savingKey !== null}
-          onChange={event => setPageLabelDrafts(previous => ({ ...previous, [key]: event.target.value }))}
-          onBlur={() => void savePageLabel(key)}
-          className="min-w-0 flex-1 border-b border-transparent bg-transparent text-sm font-medium text-neutral-800 hover:border-neutral-300 focus:border-[#1E3A2B] focus:outline-none placeholder:text-neutral-800 disabled:opacity-60"
-        />
+        <div className="relative min-w-0 flex-1">
+          <Pencil aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+          <input
+            type="text"
+            value={pageLabelDrafts[key] || ''}
+            maxLength={60}
+            aria-label={`Nazwa strony: ${adminText(lang, SITE_PAGE_LABELS[key])}`}
+            placeholder={adminText(lang, SITE_PAGE_LABELS[key])}
+            disabled={savingKey !== null}
+            onFocus={() => setEditingPageLabelKey(key)}
+            onChange={event => setPageLabelDrafts(previous => ({ ...previous, [key]: event.target.value }))}
+            onBlur={() => {
+              setEditingPageLabelKey(null);
+              void savePageLabel(key);
+            }}
+            className="w-full min-w-0 rounded-lg border border-neutral-300 bg-neutral-50 py-2 pl-9 pr-3 text-sm font-medium text-neutral-800 placeholder:text-neutral-600 hover:border-neutral-400 focus:border-[#1E3A2B] focus:outline-none focus:ring-2 focus:ring-[#1E3A2B]/20 disabled:opacity-60"
+          />
+        </div>
         <button
           type="button"
           role="switch"
@@ -147,7 +158,7 @@ export const AdminSiteControls: React.FC<AdminSiteControlsProps> = ({ lang }) =>
               {adminText(lang, 'Widoczność stron i funkcji')}
             </h2>
             <p className="mt-1 text-xs text-neutral-600">
-              {adminText(lang, 'Zmiany widoczności zapisują się automatycznie. Edytuj nazwę strony i kliknij poza polem, aby zapisać ją w nawigacji i stopce.')}
+              {adminText(lang, 'Zmiany widoczności zapisują się automatycznie. Kliknij pole z ikoną ołówka, wpisz nową nazwę i kliknij poza polem, aby zapisać ją w nawigacji i stopce.')}
             </p>
           </div>
         </div>
