@@ -508,7 +508,7 @@ export const AdminCmsManager: React.FC<{ lang: Language }> = ({ lang }) => {
           <div className="space-y-6">
             <div className="border-b border-neutral-100 pb-4">
               <h3 className="text-lg font-serif font-bold text-[#1E3A2B]">{adminText(lang, 'Podstawowe Dane Ośrodka & Kontakt')}</h3>
-              <p className="text-xs text-neutral-500">{adminText(lang, 'Informacje teleadresowe, godziny recepcji i gwarancja rabatu bezpośredniego. Tagline i krótki opis są widoczne na banerze głównym strony.')}</p>
+              <p className="text-xs text-neutral-500">{adminText(lang, 'Informacje teleadresowe, godziny recepcji i gwarancja rabatu bezpośredniego. Tagline wyświetla się jako duży nagłówek banera głównego, a krótki opis pod nim.')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
