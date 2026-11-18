@@ -181,7 +181,7 @@ export const Hero: React.FC<HeroProps> = ({
 
           {/* Mountain Weather Badge with Interactive Hover Pop-up for 7-Day Forecast */}
           {siteSettings.components.weatherTicker && weather && (
-            <div className="relative">
+            <div className="relative ml-auto">
               <div
                 id="hero-weather-badge"
                 onMouseEnter={handleMouseEnter}
