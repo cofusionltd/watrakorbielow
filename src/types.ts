@@ -109,6 +109,7 @@ export interface PromotionalCampaign {
   subtitle: string;
   badge: string;
   discountPercentage: number;
+  price: string;
   promoCode: string;
   startDate: string;
   endDate: string;
