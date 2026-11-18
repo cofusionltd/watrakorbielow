@@ -25,7 +25,7 @@ export const Hero: React.FC<HeroProps> = ({
   campaignsCount = 0,
   onNavigateToPackages
 }) => {
-  const { siteSettings } = useCms();
+  const { content, siteSettings } = useCms();
   const [activeSeasonView, setActiveSeasonView] = useState<'winter' | 'summer'>('winter');
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -35,6 +35,8 @@ export const Hero: React.FC<HeroProps> = ({
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const t = useCmsTranslations(lang);
+  const heroTagline = lang === 'pl' ? content.resort.tagline.trim() || t.hero.tag : t.hero.tag;
+  const heroDescription = lang === 'pl' ? content.resort.description.trim() || t.hero.subheadline : t.hero.subheadline;
 
   // Prewarm YouTube embed connection when user hovers over the button or after mount
   const handlePrewarmVideo = () => {
@@ -327,7 +329,7 @@ export const Hero: React.FC<HeroProps> = ({
         <div className="max-w-3xl text-left text-white space-y-6">
           <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#D4A373]/20 border border-[#D4A373]/50 text-[#D4A373] text-xs uppercase tracking-widest font-semibold backdrop-blur-xs">
             <Sparkles className="w-3.5 h-3.5 text-[#D4A373]" />
-            <span>{t.hero.tag}</span>
+            <span>{heroTagline}</span>
           </div>
 
           <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#F9F8F6] leading-[1.15] drop-shadow-md">
@@ -335,7 +337,7 @@ export const Hero: React.FC<HeroProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-[#F9F8F6]/90 max-w-2xl leading-relaxed font-light drop-shadow">
-            {t.hero.subheadline}
+            {heroDescription}
           </p>
 
           <div className="flex flex-wrap items-center gap-4 pt-2">
