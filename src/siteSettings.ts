@@ -4,6 +4,7 @@ export type PublicPageKey = Exclude<PageView, 'admin'>;
 
 export interface SiteSettings {
   pages: Record<PublicPageKey, boolean>;
+  pageLabels: Partial<Record<PublicPageKey, string>>;
   features: {
     reservations: boolean;
     promotions: boolean;
@@ -40,6 +41,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     packages: true,
     contact: true,
   },
+  pageLabels: {},
   features: {
     reservations: true,
     promotions: true,

@@ -55,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
     { page: 'packages', label: t.nav.packages },
     { page: 'contact', label: t.nav.contact },
   ] satisfies { page: Exclude<PageView, 'admin'>; label: string }[])
+    .map(item => ({ ...item, label: siteSettings.pageLabels[item.page]?.trim() || item.label }))
     .filter((item) => siteSettings.pages[item.page]);
 
   const handleLinkClick = (page: PageView) => {

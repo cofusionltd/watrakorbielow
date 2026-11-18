@@ -23,6 +23,7 @@ export const Footer: React.FC<FooterProps> = ({ lang, onNavigate, onOpenBooking 
     { page: 'packages', label: t.footerExtra?.packagesLink || 'Pakiety & Promocje' },
     { page: 'contact', label: t.footerExtra?.contactLink || 'Kontakt & Dojazd' },
   ] satisfies { page: Exclude<PageView, 'admin'>; label: string }[])
+    .map(item => ({ ...item, label: siteSettings.pageLabels[item.page]?.trim() || item.label }))
     .filter(({ page }) => siteSettings.pages[page]);
 
   const handlePageClick = (page: PageView) => {

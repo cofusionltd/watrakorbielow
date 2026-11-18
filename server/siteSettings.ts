@@ -19,6 +19,7 @@ const mergeSettings = (value: unknown): SiteSettings => {
 
   const settings = {
     pages: { ...DEFAULT_SITE_SETTINGS.pages },
+    pageLabels: { ...DEFAULT_SITE_SETTINGS.pageLabels },
     features: { ...DEFAULT_SITE_SETTINGS.features },
     components: { ...DEFAULT_SITE_SETTINGS.components },
   };
@@ -39,8 +40,23 @@ const mergeSettings = (value: unknown): SiteSettings => {
     }
   }
 
+  const pageLabels = value.pageLabels;
+  if (pageLabels !== undefined) {
+    if (!isRecord(pageLabels)) {
+      throw new Error('Site settings "pageLabels" must be an object.');
+    }
+
+    const allowedPageKeys = Object.keys(DEFAULT_SITE_SETTINGS.pages);
+    for (const [key, label] of Object.entries(pageLabels)) {
+      if (!allowedPageKeys.includes(key) || typeof label !== 'string' || label.length > 60) {
+        throw new SiteSettingsValidationError(`Invalid site setting: pageLabels.${key}`);
+      }
+      settings.pageLabels[key as keyof typeof DEFAULT_SITE_SETTINGS.pages] = label.trim();
+    }
+  }
+
   for (const key of Object.keys(value)) {
-    if (key !== 'pages' && key !== 'features' && key !== 'components') {
+    if (key !== 'pages' && key !== 'pageLabels' && key !== 'features' && key !== 'components') {
       throw new SiteSettingsValidationError(`Invalid site settings section: ${key}`);
     }
   }
@@ -67,7 +83,7 @@ export async function updateSiteSettings(updates: unknown): Promise<SiteSettings
   if (!isRecord(updates)) {
     throw new SiteSettingsValidationError('Site settings update must be an object.');
   }
-  for (const section of ['pages', 'features', 'components'] as const) {
+  for (const section of ['pages', 'pageLabels', 'features', 'components'] as const) {
     if (updates[section] !== undefined && !isRecord(updates[section])) {
       throw new SiteSettingsValidationError(`Site settings "${section}" must be an object.`);
     }
@@ -76,10 +92,11 @@ export async function updateSiteSettings(updates: unknown): Promise<SiteSettings
   const currentSettings = await getSiteSettings();
   const merged = mergeSettings({
     pages: { ...currentSettings.pages, ...(isRecord(updates.pages) ? updates.pages : {}) },
+    pageLabels: { ...currentSettings.pageLabels, ...(isRecord(updates.pageLabels) ? updates.pageLabels : {}) },
     features: { ...currentSettings.features, ...(isRecord(updates.features) ? updates.features : {}) },
     components: { ...currentSettings.components, ...(isRecord(updates.components) ? updates.components : {}) },
     ...Object.fromEntries(
-      Object.entries(updates).filter(([key]) => !['pages', 'features', 'components'].includes(key))
+      Object.entries(updates).filter(([key]) => !['pages', 'pageLabels', 'features', 'components'].includes(key))
     ),
   });
 
