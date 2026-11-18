@@ -8,7 +8,6 @@ import {
   Trash2,
   Edit,
   Tag,
-  Calendar,
   Percent,
   Sparkles,
   Eye,
@@ -80,8 +79,6 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
   const [campaignFormError, setCampaignFormError] = useState<string | null>(null);
   const [isSavingCampaign, setIsSavingCampaign] = useState(false);
 
-  // Custom uploaded images for campaigns
-  const [customImages, setCustomImages] = useState<{ url: string; label: string }[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageUploadNotice, setImageUploadNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,44 +107,16 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState('');
-  const [formSubtitle, setFormSubtitle] = useState('');
-  const [formBadge, setFormBadge] = useState('-15% Promocja Sezonowa');
   const [formDiscount, setFormDiscount] = useState<number>(15);
-  const [formPromoCode, setFormPromoCode] = useState('BESKID15');
-  const [formStartDate, setFormStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [formEndDate, setFormEndDate] = useState('2027-03-31');
-  const [formCategory, setFormCategory] = useState<'winter' | 'summer' | 'wellness' | 'all'>('winter');
+  const [formPrice, setFormPrice] = useState('');
   const [formImageUrl, setFormImageUrl] = useState('/images/image-13.jpg');
-  const [formDescription, setFormDescription] = useState('');
-  const [formPerks, setFormPerks] = useState<string>(
-    '15% zniżki na pobyt\nDarmowy seans w jacuzzi pod gwiazdami\nKieliszek powitalnej nalewki w karczmie'
-  );
-
-  const availableImages = [
-    ...customImages,
-    { url: '/images/image-13.jpg', label: 'Zimowe Pilsko & Narty' },
-    { url: '/images/jacuzi.jpg', label: 'Zewnętrzne Jacuzzi' },
-    { url: '/images/image-46.jpg', label: 'Sauna Fińska' },
-    { url: '/images/image-30.jpg', label: 'Restauracja & Karczma' },
-    { url: '/images/image-23.jpg', label: 'Komfortowy Pokój' },
-    { url: '/images/image-25.jpg', label: 'Apartament Górski' },
-    { url: '/images/bilard-1.jpg', label: 'Bilard & Rekreacja' },
-    { url: '/images/image-08.jpg', label: 'Letnie szlaki i zieleń' }
-  ];
 
   const resetCampaignForm = () => {
     setEditingCampaignId(null);
     setFormTitle('');
-    setFormSubtitle('');
-    setFormBadge('-15% Promocja Sezonowa');
     setFormDiscount(15);
-    setFormPromoCode('BESKID15');
-    setFormStartDate(new Date().toISOString().split('T')[0]);
-    setFormEndDate('2027-03-31');
-    setFormCategory('winter');
+    setFormPrice('');
     setFormImageUrl('/images/image-13.jpg');
-    setFormDescription('');
-    setFormPerks('15% zniżki na pobyt\nDarmowy seans w jacuzzi pod gwiazdami\nKieliszek powitalnej nalewki w karczmie');
     setCampaignFormError(null);
     setImageUploadNotice(null);
   };
@@ -155,24 +124,11 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
   const startCampaignEdit = (campaign: PromotionalCampaign) => {
     setEditingCampaignId(campaign.id);
     setFormTitle(campaign.title);
-    setFormSubtitle(campaign.subtitle);
-    setFormBadge(campaign.badge);
     setFormDiscount(campaign.discountPercentage);
-    setFormPromoCode(campaign.promoCode);
-    setFormStartDate(campaign.startDate);
-    setFormEndDate(campaign.endDate);
-    setFormCategory(campaign.category);
+    setFormPrice(campaign.price);
     setFormImageUrl(campaign.imageUrl);
-    setFormDescription(campaign.description);
-    setFormPerks(campaign.perks.join('\n'));
     setCampaignFormError(null);
     setImageUploadNotice(null);
-    if (campaign.imageUrl && !availableImages.some(image => image.url === campaign.imageUrl)) {
-      setCustomImages(previous => [
-        { url: campaign.imageUrl, label: `Obecne zdjęcie: ${campaign.title}` },
-        ...previous.filter(image => image.url !== campaign.imageUrl),
-      ]);
-    }
     setIsCreating(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -284,11 +240,6 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
         throw new Error('Serwer zwrócił nieprawidłowy adres zdjęcia.');
       }
 
-      const newImage = {
-        url: result.url,
-        label: `Wgrane: ${file.name.substring(0, 20)}`,
-      };
-      setCustomImages(previous => [newImage, ...previous.filter(image => image.url !== result.url)]);
       setFormImageUrl(result.url);
       setImageUploadNotice(`Zdjęcie "${file.name}" wgrano i wybrano pomyślnie.`);
     } catch (error) {
@@ -449,10 +400,6 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
     setCampaignFormError(null);
-    const perksArray = formPerks
-      .split('\n')
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0);
 
     setIsSavingCampaign(true);
     try {
@@ -465,16 +412,9 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: formTitle,
-          subtitle: formSubtitle,
-          badge: formBadge,
           discountPercentage: formDiscount,
-          promoCode: formPromoCode,
-          startDate: formStartDate,
-          endDate: formEndDate,
-          category: formCategory,
+          price: formPrice.trim(),
           imageUrl: formImageUrl,
-          description: formDescription,
-          perks: perksArray
         })
       });
 
@@ -812,7 +752,7 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
             )}
 
             <form onSubmit={handleCreateCampaign} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
                     Tytuł Kampanii *
@@ -823,39 +763,10 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
                     placeholder="np. Złota Jesień w Beskidach - Relaks w Górach"
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
+                    maxLength={120}
                     className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800 font-medium"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                    Podtytuł / Hasło Promocyjne
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="np. 3 noce w cenie 2 ze śniadaniem i darmowym jacuzzi"
-                    value={formSubtitle}
-                    onChange={(e) => setFormSubtitle(e.target.value)}
-                    className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800 font-medium"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                    Etykieta / Badge *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="np. -15% First Minute"
-                    value={formBadge}
-                    onChange={(e) => setFormBadge(e.target.value)}
-                    className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800 font-medium"
-                  />
-                </div>
-
                 <div>
                   <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
                     Rabat Procentowy (%) *
@@ -870,106 +781,57 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
                       onChange={(e) => setFormDiscount(Number(e.target.value))}
                       className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800 font-medium"
                     />
-                    <Percent className="w-3.5 h-3.5 text-neutral-400 absolute right-3 top-3" />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                    Kod Promocyjny dla Klientów *
+                    Cena *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="np. JESIEN2026"
-                    value={formPromoCode}
-                    onChange={(e) => setFormPromoCode(e.target.value.toUpperCase())}
-                    className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800 font-mono font-bold uppercase"
+                    maxLength={100}
+                    placeholder="np. od 1 290 zł / osoba"
+                    value={formPrice}
+                    onChange={(e) => setFormPrice(e.target.value)}
+                    className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800 font-medium"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                    Ważna Od (Data rozpoczęcia)
-                  </label>
-                  <input
-                    type="date"
-                    value={formStartDate}
-                    onChange={(e) => setFormStartDate(e.target.value)}
-                    className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800 font-medium"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                    Ważna Do (Data zakończenia)
-                  </label>
-                  <input
-                    type="date"
-                    value={formEndDate}
-                    onChange={(e) => setFormEndDate(e.target.value)}
-                    className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800 font-medium"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                    Kategoria Sezonowa
-                  </label>
-                  <select
-                    value={formCategory}
-                    onChange={(e: any) => setFormCategory(e.target.value)}
-                    className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-800 font-medium"
-                  >
-                    <option value="winter">Zima / Narty</option>
-                    <option value="summer">Lato / Szlaki</option>
-                    <option value="wellness">Wellness & SPA</option>
-                    <option value="all">Całoroczna</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Image selection with Upload capability */}
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <label className="block text-xs font-bold text-[#1E3A2B] uppercase">
-                      Zdjęcie Banera Kampanii *
+                      Zdjęcie kampanii *
                     </label>
-                    <p className="text-[11px] text-neutral-500">
-                      Wybierz z biblioteki lub wgraj nowe własne zdjęcie z dysku
-                    </p>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageFileUpload}
-                      accept="image/*"
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploadingImage}
-                      className="bg-[#1E3A2B] hover:bg-[#2A4F3B] text-[#F9F8F6] px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      {isUploadingImage ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Wgrywanie...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-3.5 h-3.5 text-[#D4A373]" />
-                          <span>Wgraj Nowe Zdjęcie (Upload)</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageFileUpload}
+                    accept="image/avif,image/gif,image/jpeg,image/png,image/svg+xml,image/webp"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="bg-[#1E3A2B] hover:bg-[#2A4F3B] text-[#F9F8F6] px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isUploadingImage ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Wgrywanie...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5 text-[#D4A373]" />
+                        <span>Wybierz zdjęcie z urządzenia</span>
+                      </>
+                    )}
+                  </button>
                 </div>
 
                 {imageUploadNotice && (
@@ -979,75 +841,26 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
                   </div>
                 )}
 
-                {/* Grid of photos */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2.5 max-h-56 overflow-y-auto p-1 bg-neutral-50 rounded-2xl border border-neutral-200">
-                  {availableImages.map((img, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => setFormImageUrl(img.url)}
-                      className={`relative rounded-xl overflow-hidden cursor-pointer border-2 transition-all h-22 group ${
-                        formImageUrl === img.url
-                          ? 'border-[#1E3A2B] ring-3 ring-[#D4A373] shadow-md'
-                          : 'border-transparent opacity-75 hover:opacity-100 hover:scale-[1.02]'
-                      }`}
-                    >
-                      <CmsManagedImage src={img.url} alt={img.label} className="w-full h-full object-cover" />
-                      {formImageUrl === img.url && (
-                        <div className="absolute top-1 right-1 bg-[#1E3A2B] text-[#D4A373] p-0.5 rounded-full shadow-md">
-                          <Check className="w-3 h-3" />
-                        </div>
-                      )}
-                      <div className="absolute inset-x-0 bottom-0 bg-black/70 p-1 text-[9px] text-white text-center truncate font-medium">
-                        {img.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Active preview bar */}
                 {formImageUrl && (
-                  <div className="flex items-center space-x-3 p-2.5 bg-white rounded-xl border border-neutral-200 shadow-2xs">
+                  <div className="relative overflow-hidden rounded-2xl border border-neutral-200 aspect-[16/7] bg-neutral-100">
                     <CmsManagedImage
                       src={formImageUrl}
-                      alt="Wybrany podgląd"
-                      className="w-14 h-10 rounded-lg object-cover border border-neutral-300 shrink-0"
+                      alt="Podgląd zdjęcia kampanii"
+                      className="w-full h-full object-cover"
                     />
-                    <div className="text-xs truncate flex-1">
-                      <span className="font-bold text-[#1E3A2B]">Wybrana grafika:</span>
-                      <span className="text-neutral-500 font-mono text-[11px] ml-1.5 truncate">
-                        {formImageUrl}
-                      </span>
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-white/95 via-white/75 to-transparent p-5 pt-12">
+                      <div className="flex items-end justify-between gap-4">
+                        <h4 className="font-serif text-xl font-bold text-black line-clamp-2">
+                          {formTitle || 'Tytuł kampanii'}
+                        </h4>
+                        <span className="shrink-0 rounded-lg bg-white/90 px-3 py-1.5 text-sm font-bold text-black">
+                          -{formDiscount}%
+                        </span>
+                      </div>
+                      {formPrice && <p className="mt-1 text-sm font-semibold text-black">{formPrice}</p>}
                     </div>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
-                      Gotowe do publikacji
-                    </span>
                   </div>
                 )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                  Opis Kampanii
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Opisz korzyści oferty, dla kogo jest przeznaczona..."
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2 text-xs text-neutral-800 font-medium resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#1E3A2B] uppercase mb-1">
-                  Punkty Oferty (jeden w każdej linii)
-                </label>
-                <textarea
-                  rows={3}
-                  value={formPerks}
-                  onChange={(e) => setFormPerks(e.target.value)}
-                  className="w-full bg-[#F9F8F6] border border-neutral-300 rounded-xl px-3.5 py-2 text-xs text-neutral-800 font-medium resize-none"
-                />
               </div>
 
               <div className="flex justify-end space-x-3 pt-2">
@@ -1150,100 +963,61 @@ export const AdminPage: React.FC<{ lang: Language }> = ({ lang }) => {
                 {campaigns.map((camp) => (
                   <div
                     key={camp.id}
-                    className={`bg-white rounded-2xl overflow-hidden border shadow-xs flex flex-col justify-between transition-all duration-300 ${
+                    className={`relative aspect-[4/3] rounded-2xl overflow-hidden border shadow-xs transition-all duration-300 ${
                       camp.active
                         ? 'border-neutral-200/90 hover:shadow-lg'
-                        : 'border-neutral-200 opacity-60 bg-neutral-50'
+                        : 'border-neutral-300 grayscale'
                     }`}
                   >
-                    <div>
-                      {/* Image & Badges */}
-                      <div className="relative h-44 overflow-hidden">
-                        <CmsManagedImage
-                          src={camp.imageUrl}
-                          alt={camp.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute top-3 left-3 bg-[#1E3A2B] text-[#D4A373] text-[10px] font-bold px-2.5 py-1 rounded-md shadow">
-                          {camp.badge}
-                        </div>
-                        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-1 rounded-md">
-                          -{camp.discountPercentage}%
-                        </div>
-                        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-xs text-[#1E3A2B] text-[11px] font-mono font-bold px-2.5 py-1 rounded shadow-xs">
-                          Kod: {camp.promoCode}
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="p-5 space-y-3">
-                        <div>
-                          <div className="flex items-center space-x-1.5 text-[10px] text-neutral-600 mb-1">
-                            <Calendar className="w-3 h-3 text-[#D4A373]" />
-                            <span>
-                              {camp.startDate} — {camp.endDate}
-                            </span>
-                          </div>
-                          <h3 className="font-serif text-base font-bold text-[#1E3A2B] leading-snug">
-                            {camp.title}
-                          </h3>
-                          <p className="text-xs text-neutral-600 mt-1 line-clamp-2">
-                            {camp.subtitle}
-                          </p>
-                        </div>
-
-                        {/* Perks */}
-                        <div className="space-y-1.5 pt-2 border-t border-neutral-100">
-                          {camp.perks?.slice(0, 3).map((perk, i) => (
-                            <div key={i} className="text-[11px] text-neutral-700 flex items-center space-x-1.5 truncate">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
-                              <span className="truncate">{perk}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                    <CmsManagedImage
+                      src={camp.imageUrl}
+                      alt={camp.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/20 to-white/10" />
+                    <div className="absolute inset-x-0 top-0 flex items-start justify-between p-3">
+                      <span className={`rounded-md px-2.5 py-1 text-[10px] font-bold shadow-sm ${
+                        camp.active ? 'bg-white/90 text-emerald-800' : 'bg-neutral-800/80 text-white'
+                      }`}>
+                        {camp.active ? 'Opublikowana' : 'Wstrzymana'}
+                      </span>
+                      <span className="rounded-md bg-white/90 px-2.5 py-1 text-sm font-bold text-black shadow-sm">
+                        -{camp.discountPercentage}%
+                      </span>
                     </div>
-
-                    {/* Action Bar */}
-                    <div className="p-4 bg-[#F9F8F6] border-t border-neutral-200/80 flex items-center justify-between">
-                      <button
-                        onClick={() => handleToggleActive(camp.id, camp.active)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer ${
-                          camp.active
-                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                            : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'
-                        }`}
-                      >
-                        {camp.active ? (
-                          <>
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700" />
-                            <span>Opublikowana</span>
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-3.5 h-3.5 text-neutral-600" />
-                            <span>Wstrzymana</span>
-                          </>
-                        )}
-                      </button>
-
-                      <div className="flex items-center space-x-1">
+                    <div className="absolute inset-x-0 bottom-0 space-y-3 p-4">
+                      <div>
+                        <h3 className="font-serif text-lg font-bold leading-snug text-black drop-shadow-sm">
+                          {camp.title}
+                        </h3>
+                        {camp.price && <p className="mt-1 text-sm font-semibold text-black">{camp.price}</p>}
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
                         <button
-                          type="button"
-                          onClick={() => startCampaignEdit(camp)}
-                          className="p-1.5 text-neutral-500 hover:text-[#1E3A2B] rounded-lg hover:bg-white transition-colors"
-                          title="Edytuj kampanię"
-                          aria-label={`Edytuj kampanię ${camp.title}`}
+                          onClick={() => handleToggleActive(camp.id, camp.active)}
+                          className="rounded-lg bg-white/90 px-3 py-1.5 text-xs font-bold text-[#1E3A2B] shadow-sm transition-colors hover:bg-white"
                         >
-                          <Edit className="w-4 h-4" />
+                          {camp.active ? 'Wstrzymaj' : 'Opublikuj'}
                         </button>
-                        <button
-                          onClick={() => handleDeleteCampaign(camp.id)}
-                          className="p-1.5 text-neutral-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                          title="Usuń kampanię"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            type="button"
+                            onClick={() => startCampaignEdit(camp)}
+                            className="rounded-lg bg-white/90 p-2 text-neutral-600 shadow-sm transition-colors hover:bg-white hover:text-[#1E3A2B]"
+                            title="Edytuj kampanię"
+                            aria-label={`Edytuj kampanię ${camp.title}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCampaign(camp.id)}
+                            className="rounded-lg bg-white/90 p-2 text-neutral-500 shadow-sm transition-colors hover:bg-white hover:text-red-600"
+                            title="Usuń kampanię"
+                            aria-label={`Usuń kampanię ${camp.title}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -100,6 +100,7 @@ interface PromotionalCampaign {
   subtitle: string;
   badge: string;
   discountPercentage: number;
+  price: string;
   promoCode: string;
   startDate: string;
   endDate: string;
@@ -162,6 +163,7 @@ const mapPromotion = (row: Awaited<ReturnType<typeof dbGetPromotions>>[number]):
     subtitle: typeof metadata.subtitle === 'string' ? metadata.subtitle : '',
     badge: row.badge,
     discountPercentage: row.discountPercent,
+    price: typeof metadata.price === 'string' ? metadata.price : '',
     promoCode: row.promoCode,
     startDate: row.startsAt,
     endDate: row.endsAt,
@@ -191,6 +193,7 @@ const defaultCampaigns: PromotionalCampaign[] = [
     subtitle: "Zarezerwuj ferie zimowe z wyprzedzeniem i odbierz zniżkę na pobyt i skipass",
     badge: "-15% First Minute",
     discountPercentage: 15,
+    price: "",
     promoCode: "ZIMA2026",
     startDate: "2026-11-01",
     endDate: "2027-03-31",
@@ -212,6 +215,7 @@ const defaultCampaigns: PromotionalCampaign[] = [
     subtitle: "Romantyczny relaks w jacuzzi z widokiem na las, sauna i regionalna kolacja",
     badge: "Pakiet dla Par",
     discountPercentage: 10,
+    price: "",
     promoCode: "ROMANTIC",
     startDate: "2026-09-15",
     endDate: "2026-12-20",
@@ -233,6 +237,7 @@ const defaultCampaigns: PromotionalCampaign[] = [
     subtitle: "Pakiety rehabilitacyjne z zabiegami fizjoterapeutycznymi i pełnym wyżywieniem",
     badge: "Dofinansowanie PFRON",
     discountPercentage: 12,
+    price: "",
     promoCode: "ZDROWIE",
     startDate: "2026-09-01",
     endDate: "2026-11-30",
@@ -1179,38 +1184,46 @@ async function startServer() {
   app.post("/api/admin/campaigns", asyncRoute(async (req, res) => {
     const {
       title,
-      subtitle,
-      badge,
       discountPercentage,
-      promoCode,
-      startDate,
-      endDate,
-      category = "all",
+      price,
       imageUrl,
-      description,
-      perks = []
     } = req.body;
 
-    if (!title || !badge || !promoCode) {
-      return res.status(400).json({ error: "Tytuł kampanii, etykieta i kod promocyjny są wymagane." });
+    const discount = Number(discountPercentage);
+    if (typeof title !== "string" || !title.trim() || title.trim().length > 120) {
+      return res.status(400).json({ error: "Podaj tytuł kampanii (maksymalnie 120 znaków)." });
+    }
+    if (typeof price !== "string" || !price.trim() || price.trim().length > 100) {
+      return res.status(400).json({ error: "Podaj cenę kampanii (maksymalnie 100 znaków)." });
+    }
+    if (!Number.isInteger(discount) || discount < 5 || discount > 50) {
+      return res.status(400).json({ error: "Rabat musi wynosić od 5% do 50%." });
+    }
+    if (typeof imageUrl !== "string" || !imageUrl.trim()) {
+      return res.status(400).json({ error: "Wybierz zdjęcie kampanii." });
     }
 
+    const id = `camp-${Date.now()}`;
+    const startDate = new Date().toISOString().split("T")[0];
+    const endDateValue = new Date();
+    endDateValue.setFullYear(endDateValue.getFullYear() + 1);
     const newCampaign: PromotionalCampaign = {
-      id: `camp-${Date.now()}`,
-      title,
-      subtitle: subtitle || "Wyjątkowa oferta pobytowa w Beskidach",
-      badge,
-      discountPercentage: Number(discountPercentage) || 10,
-      promoCode: promoCode.trim().toUpperCase(),
-      startDate: startDate || new Date().toISOString().split("T")[0],
-      endDate: endDate || "2027-04-30",
-      category: category || "all",
-      imageUrl: imageUrl || "/images/image-13.jpg",
+      id,
+      title: title.trim(),
+      subtitle: "Wyjątkowa oferta pobytowa w Beskidach",
+      badge: `-${discount}% Promocja`,
+      discountPercentage: discount,
+      price: price.trim(),
+      promoCode: `WATRA-${Date.now().toString(36).toUpperCase()}`,
+      startDate,
+      endDate: endDateValue.toISOString().split("T")[0],
+      category: "all",
+      imageUrl: imageUrl.trim(),
       active: true,
       publishedAt: new Date().toISOString(),
-      description: description || "Skorzystaj ze specjalnej promocji bezpośredniej w Watra Korbielów.",
-      perks: Array.isArray(perks) && perks.length > 0 ? perks : [
-        `${discountPercentage || 10}% rabatu na pobyt`,
+      description: "Skorzystaj ze specjalnej promocji bezpośredniej w Watra Korbielów.",
+      perks: [
+        `${discount}% rabatu na pobyt`,
         "Darmowy parking i szybkie Wi-Fi",
         "Kieliszek nalewki powitalnej"
       ]
@@ -1231,6 +1244,7 @@ async function startServer() {
         subtitle: newCampaign.subtitle,
         category: newCampaign.category,
         imageUrl: newCampaign.imageUrl,
+        price: newCampaign.price,
         perks: newCampaign.perks,
         publishedAt: newCampaign.publishedAt,
       },
@@ -1245,10 +1259,20 @@ async function startServer() {
     if (!existing) {
       return res.status(404).json({ error: "Kampania nie została znaleziona." });
     }
+    if (Object.prototype.hasOwnProperty.call(req.body, "price")
+      && (typeof req.body.price !== "string" || !req.body.price.trim() || req.body.price.trim().length > 100)) {
+      return res.status(400).json({ error: "Podaj cenę kampanii (maksymalnie 100 znaków)." });
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, "title")
+      && (typeof req.body.title !== "string" || !req.body.title.trim() || req.body.title.trim().length > 120)) {
+      return res.status(400).json({ error: "Podaj tytuł kampanii (maksymalnie 120 znaków)." });
+    }
 
     const updated = {
       ...mapPromotion(existing),
       ...req.body,
+      ...(typeof req.body.price === "string" ? { price: req.body.price.trim() } : {}),
+      ...(typeof req.body.title === "string" ? { title: req.body.title.trim() } : {}),
       id // preserve ID
     };
 
@@ -1265,6 +1289,7 @@ async function startServer() {
         subtitle: updated.subtitle,
         category: updated.category,
         imageUrl: updated.imageUrl,
+        price: updated.price,
         perks: updated.perks,
         publishedAt: updated.publishedAt,
       },

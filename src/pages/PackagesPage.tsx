@@ -76,79 +76,50 @@ export const PackagesPage: React.FC<PackagesPageProps> = ({
               {liveCampaigns.map((camp) => (
                 <div
                   key={camp.id}
-                  className="bg-white rounded-3xl overflow-hidden border-2 border-[#D4A373]/50 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                  className="relative aspect-[4/3] overflow-hidden rounded-3xl border-2 border-[#D4A373]/50 shadow-md transition-all duration-300 hover:shadow-xl"
                 >
-                  <div>
-                    {/* Image Banner */}
-                    <div className="relative h-48 overflow-hidden">
-                      <CmsManagedImage
-                        src={camp.imageUrl}
-                        alt={camp.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-3 left-3 bg-[#1E3A2B] text-[#D4A373] text-[10px] font-bold px-2.5 py-1 rounded shadow">
-                        {camp.badge}
-                      </div>
-                      <div className="absolute top-3 right-3 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded shadow flex items-center space-x-1">
-                        <Percent className="w-3 h-3" />
-                        <span>-{camp.discountPercentage}%</span>
-                      </div>
-                    </div>
-
-                    <div className="p-6 space-y-4">
-                      <div>
-                        <div className="text-[10px] font-bold text-neutral-400 uppercase mb-1">
-                          {t.packagesPage.validityPrefix} {camp.startDate} – {camp.endDate}
-                        </div>
-                        <h3 className="font-serif text-xl font-bold text-[#1E3A2B] leading-snug">
-                          {camp.title}
-                        </h3>
-                        <p className="text-xs text-neutral-600 mt-1.5">
-                          {camp.subtitle}
-                        </p>
-                      </div>
-
-                      {/* Promo Code Pill */}
-                      <div className="bg-[#F9F8F6] p-3 rounded-xl border border-neutral-200 flex items-center justify-between">
-                        <div>
-                          <div className="text-[9px] uppercase font-bold text-neutral-400">
-                            {t.packagesPage.promoCodeLabel}
-                          </div>
-                          <div className="font-mono font-bold text-sm text-[#1E3A2B]">
-                            {camp.promoCode}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleCopyCode(camp.promoCode)}
-                          className="bg-[#1E3A2B] hover:bg-[#2A4F3B] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-                        >
-                          {copiedCode === camp.promoCode ? t.common.copied : t.common.copy}
-                        </button>
-                      </div>
-
-                      {/* Perks */}
-                      <div className="space-y-1.5 pt-2 border-t border-neutral-100 text-xs text-neutral-700">
-                        {camp.perks?.map((perk, i) => (
-                          <div key={i} className="flex items-center space-x-2">
-                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span>{perk}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Social Share Bar */}
-                      {siteSettings.components.promotionBanner && <div className="pt-3 border-t border-neutral-100">
-                        <SocialShareBar campaign={camp} variant="full" lang={lang} />
-                      </div>}
-                    </div>
+                  <CmsManagedImage
+                    src={camp.imageUrl}
+                    alt={camp.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/20 to-white/10" />
+                  <div className="absolute right-4 top-4 flex items-center gap-2">
+                    <span className="flex items-center gap-1 rounded-lg bg-white/90 px-3 py-1.5 text-sm font-bold text-black shadow">
+                      <Percent className="w-3.5 h-3.5" />
+                      -{camp.discountPercentage}%
+                    </span>
+                    {siteSettings.components.promotionBanner && (
+                      <SocialShareBar campaign={camp} variant="compact" lang={lang} />
+                    )}
                   </div>
-
-                  <div className="p-6 pt-0">
-                    {siteSettings.features.reservations && <button
-                      onClick={onOpenBooking}
-                      className="w-full bg-[#D4A373] hover:bg-[#c89260] text-[#14281E] py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-colors cursor-pointer"
-                    >
-                      {t.packagesPage.bookWithDiscount}
-                    </button>}
+                  <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                    <div className="rounded-2xl bg-white/85 p-4 shadow-lg backdrop-blur-sm">
+                      <h3 className="font-serif text-xl font-bold leading-snug text-black">
+                        {camp.title}
+                      </h3>
+                      {camp.price && (
+                        <p className="mt-1 text-base font-semibold text-black">{camp.price}</p>
+                      )}
+                      <div className="mt-3 flex items-center gap-2">
+                        {camp.promoCode && (
+                          <button
+                            onClick={() => handleCopyCode(camp.promoCode)}
+                            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-[10px] font-bold text-neutral-700 transition-colors hover:bg-neutral-50"
+                          >
+                            {copiedCode === camp.promoCode ? t.common.copied : `${t.packagesPage.promoCodeLabel}: ${camp.promoCode}`}
+                          </button>
+                        )}
+                        {siteSettings.features.reservations && (
+                          <button
+                            onClick={onOpenBooking}
+                            className="flex-1 rounded-xl bg-[#1E3A2B] py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-colors hover:bg-[#2A4F3B]"
+                          >
+                            {t.packagesPage.bookWithDiscount}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
